@@ -6,37 +6,37 @@
     <title>StudyHub - Settings</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
     <nav class="top-nav">
         <div class="nav-logo">
-            <span class="material-symbols-outlined size-40">school</span>
+            <i data-lucide="graduation-cap" class="logo-icon" style="width: 28px; height: 28px;"></i>
             <span class="logo-text">StudyHub</span>
         </div>
-        <div class="nav-menu">            
+        <div class="nav-menu">
             <a href="home.html" class="nav-link">
-                <span class="material-symbols-outlined size-25">home</span>
+                <i data-lucide="house" class="nav-icon" style="width: 18px; height: 18px;"></i>
                 <span>Home</span>
             </a>
             <a href="study-room.html" class="nav-link">
-                <span class="material-symbols-outlined size-25">group</span>
+                <i data-lucide="users" class="nav-icon" style="width: 18px; height: 18px;"></i>
                 <span>Study Room</span>
             </a>
             <a href="resource-hub.html" class="nav-link">
-                <span class="material-symbols-outlined size-25">library_books</span>
+                <i data-lucide="book-open" class="nav-icon" style="width: 18px; height: 18px;"></i>
                 <span>Resource Hub</span>
             </a>
             <a href="leaderboard.html" class="nav-link">
-                <span class="material-symbols-outlined size-25">leaderboard</span>
+                <i data-lucide="award" class="nav-icon" style="width: 18px; height: 18px;"></i>
                 <span>Leaderboard</span>
             </a>
             <a href="friends.html" class="nav-link">
-                <span class="material-symbols-outlined size-25">group_add</span>
+                <i data-lucide="user-plus" class="nav-icon" style="width: 18px; height: 18px;"></i>
                 <span>Friends</span>
             </a>
             <a href="settings.html" class="nav-link active">
-                <span class="material-symbols-outlined size-25">settings</span>
+                <i data-lucide="settings" class="nav-icon" style="width: 18px; height: 18px;"></i>
                 <span>Settings</span>
             </a>
         </div>
@@ -53,9 +53,10 @@
                     </div>
                     <div class="profile-picture-upload">
                         <button type="button" class="change-icon-btn" onclick="triggerFileInput()">
+                            <i data-lucide="camera" style="width: 18px; height: 18px; margin-right: 8px; display: inline-block; vertical-align: middle;"></i>
                             <span>Change Icon</span>
                         </button>
-                        <button type="button" class="reset-icon-btn" onclick="resetProfileIcon()" style="margin-top: 10px; background-color: #666; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                        <button type="button" class="reset-icon-btn" onclick="resetProfileIcon()" style="margin-top: 10px; background-color: #666; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: 500; min-width: 200px; height: 44px;">
                             Reset to Default
                         </button>
                         <input type="file" id="profilePicture" accept="image/*" onchange="updateProfileIcon(this)" style="display: none;">
@@ -63,7 +64,7 @@
                 </div>
                 <div class="form-group">
                     <label for="settingsUsername">Username</label>
-                    <input type="text" id="settingsUsername" value="John Doe">
+                    <input type="text" id="settingsUsername" value="">
                 </div>
                 <button class="submit-btn" onclick="saveProfile()">Save Changes</button>
             </div>
@@ -122,12 +123,30 @@
         }
         
         window.onload = function() {
+            // Load saved username from localStorage
+            const savedUsername = localStorage.getItem('currentUsername');
+            const usernameInput = document.getElementById('settingsUsername');
+            if (usernameInput) {
+                if (savedUsername) {
+                    usernameInput.value = savedUsername;
+                } else if (typeof currentUser !== 'undefined') {
+                    usernameInput.value = currentUser.username;
+                } else {
+                    usernameInput.value = 'John Doe';
+                }
+            }
+            
             // Set default profile icon to user abbreviation
             if (typeof currentUser !== 'undefined' && typeof getUserIconAbbreviation === 'function') {
                 const iconEl = document.getElementById('profilePictureIcon');
                 if (iconEl) {
-                    iconEl.textContent = getUserIconAbbreviation(currentUser.username);
+                    const displayUsername = savedUsername || currentUser.username;
+                    iconEl.textContent = getUserIconAbbreviation(displayUsername);
                 }
+            }
+            // Initialize lucide icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
             }
         };
     </script>

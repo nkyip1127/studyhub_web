@@ -13,7 +13,7 @@ let currentUser = {
 };
 
 // Study room time (adjustable in app.js for demonstration)
-let currentStudyRoomTime = 50; // in minutes, default 0
+let currentStudyRoomTime = 49.8; // in minutes, default 0
 
 let studyRooms = [];
 let resources = [];
@@ -25,9 +25,20 @@ let isSearchingRooms = false;
 
 // Initialize mock data
 function initMockData() {
+    // Load uploaded resources from localStorage
+    const savedResources = localStorage.getItem('uploadedResources');
+    let uploadedResources = [];
+    if (savedResources) {
+        try {
+            uploadedResources = JSON.parse(savedResources);
+        } catch (e) {
+            console.error('Error loading uploaded resources:', e);
+        }
+    }
+    
     // Study Rooms (at least 15 examples)
     studyRooms = [
-        { id: '123456', name: 'EE4213 Study Group', topic: 'Human Computer Interaction', participants: 15, maxParticipants: 20, isPublic: true, createdTime: '10h 03m', password: null },
+        { id: '123456', name: 'EE4213 Study Group', topic: 'Human Computer Interacton', participants: 15, maxParticipants: 20, isPublic: true, createdTime: '10h 03m', password: null },
         { id: '234567', name: 'MA1200 Calculus', topic: 'Linear Algebra', participants: 8, maxParticipants: 15, isPublic: true, createdTime: '5h 20m', password: null },
         { id: '345678', name: 'CS101 Programming', topic: 'Python Basics', participants: 20, maxParticipants: 20, isPublic: true, createdTime: '15h 45m', password: null },
         { id: '456789', name: 'Physics Study Room', topic: 'Quantum Mechanics', participants: 12, maxParticipants: 18, isPublic: true, createdTime: '8h 30m', password: null },
@@ -67,6 +78,22 @@ function initMockData() {
         { id: 17, university: 'The University of Hong Kong', courseCode: 'EE4213', type: 'Homework', fileName: 'HW2_Solutions.pdf', description: 'Complete solutions to Homework 2', solutionAvailable: true, uploadedBy: 'user17' },
         { id: 18, university: 'Lingnan University', courseCode: 'MA1200', type: 'Lab Report', fileName: 'Matrix_Operations_Lab.pdf', description: 'Lab on matrix operations', solutionAvailable: false, uploadedBy: 'user18' }
     ];
+    
+    // Merge uploaded resources with mock data
+    // Find the highest ID from mock data to ensure unique IDs
+    const maxMockId = resources.length > 0 ? Math.max(...resources.map(r => r.id || 0)) : 0;
+    // Update IDs of uploaded resources to be unique (if they don't have IDs or have duplicate IDs)
+    let nextId = maxMockId + 1;
+    uploadedResources.forEach((resource) => {
+        if (!resource.id || resource.id <= maxMockId) {
+            resource.id = nextId++;
+        } else {
+            // Keep existing ID if it's unique
+            nextId = Math.max(nextId, resource.id + 1);
+        }
+    });
+    // Combine mock data with uploaded resources
+    resources = [...resources, ...uploadedResources];
 
     // Friends (default 10 friends)
     friends = [
@@ -160,12 +187,6 @@ function updateUserInfo() {
     if (studyStreakEl) studyStreakEl.textContent = currentUser.studyStreak + ' days';
     if (userNameEl) userNameEl.textContent = currentUser.username;
     if (welcomeMessageEl) welcomeMessageEl.textContent = `Welcome to StudyHub! ${currentUser.username}`;
-
-    // <-- new: populate settings username input so saved name shows on settings page
-    const settingsUsernameInput = document.getElementById('settingsUsername');
-    if (settingsUsernameInput) {
-        settingsUsernameInput.value = currentUser.username;
-    }
     
     // Load saved profile icon from localStorage, or use abbreviation
     if (userIconEl) {
@@ -178,7 +199,7 @@ function updateUserInfo() {
                 // Convert div to img
                 const img = document.createElement('img');
                 img.src = savedIcon;
-                img.className = 'user-icon-img';
+                img.className = 'user-icon';
                 img.style.width = '50px';
                 img.style.height = '50px';
                 img.style.borderRadius = '50%';
@@ -250,7 +271,8 @@ function showNotification(message, type = 'success') {
         }
         
         lastNotificationTime = currentTime;
-        notification.textContent = message;
+        // Support multi-line messages by converting \n to <br>
+        notification.innerHTML = message.replace(/\n/g, '<br>');
         notification.className = `notification ${type}`;
         notification.style.display = 'block';
         
@@ -454,6 +476,14 @@ function uploadResource() {
     const modal = document.getElementById('uploadModal');
     if (modal) {
         modal.style.display = 'block';
+        // Clear selected files when opening modal
+        if (typeof window.selectedFiles !== 'undefined') {
+            window.selectedFiles = [];
+        }
+        const filesListDiv = document.getElementById('uploadedFilesList');
+        if (filesListDiv) filesListDiv.innerHTML = '';
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) fileInput.value = '';
     }
 }
 
@@ -461,6 +491,14 @@ function closeUploadModal() {
     const modal = document.getElementById('uploadModal');
     if (modal) {
         modal.style.display = 'none';
+    }
+    // Clear selected files when modal is closed
+    if (typeof selectedFiles !== 'undefined' && window.selectedFiles) {
+        window.selectedFiles = [];
+        const filesListDiv = document.getElementById('uploadedFilesList');
+        if (filesListDiv) filesListDiv.innerHTML = '';
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) fileInput.value = '';
     }
 }
 
@@ -486,13 +524,11 @@ function submitUpload() {
         return;
     }
     if (!fileInput.files || fileInput.files.length === 0) {
-        showNotification('Please upload a document.', 'error');
+        showNotification('Please upload at least one document.', 'error');
         return;
     }
     
-    const fileName = fileInput.files[0].name;
-    
-    // Calculate points based on type
+    // Calculate points based on type (once per upload, not per file)
     let points = 0;
     if (type === 'Past Papers') points = 300;
     else if (type === 'Lab Report' || type === 'Lab Report/Tutorial') points = 150;
@@ -502,25 +538,55 @@ function submitUpload() {
     
     if (solutionAvailable) points += 100;
     
+    const totalFiles = fileInput.files.length;
+    
+    // Award points only once per upload, regardless of number of files
     currentUser.studyPoints += points;
     // Save to localStorage for persistence
     localStorage.setItem('userStudyPoints', currentUser.studyPoints.toString());
     updateUserInfo();
     updateResourceHubStudyPoints();
     
+    // Calculate next available ID
+    let maxId = resources.length > 0 ? Math.max(...resources.map(r => r.id || 0)) : 0;
+    
+    // Create a resource for each uploaded file
+    const newResources = [];
+    const savedResources = localStorage.getItem('uploadedResources');
+    let uploadedResources = [];
+    if (savedResources) {
+        try {
+            uploadedResources = JSON.parse(savedResources);
+        } catch (e) {
+            console.error('Error loading uploaded resources:', e);
+        }
+    }
+    
+    // Collect all file names for a single resource entry
+    const uploadedFileNames = Array.from(fileInput.files).map(file => file.name);
+    
+    // Create a single resource entry with all file names
+    maxId++;
     const newResource = {
-        id: resources.length + 1,
+        id: maxId,
         university: university,
         courseCode: courseCode,
         type: type,
-        fileName: fileName,
+        fileName: uploadedFileNames.length === 1 ? uploadedFileNames[0] : uploadedFileNames.join(', '), // Single file name or comma-separated list
+        fileNames: uploadedFileNames, // Store as array for multi-file resources
         description: description || 'No description',
         solutionAvailable: solutionAvailable,
         uploadedBy: currentUser.username
     };
     
     resources.push(newResource);
+    uploadedResources.push(newResource);
+    
+    // Save uploaded resources to localStorage for persistence
+    localStorage.setItem('uploadedResources', JSON.stringify(uploadedResources));
+    
     closeUploadModal();
+    
     // Reset form
     document.getElementById('uploadUniversity').value = '';
     document.getElementById('uploadCourseCode').value = '';
@@ -528,17 +594,58 @@ function submitUpload() {
     document.getElementById('uploadSolution').checked = false;
     document.getElementById('uploadType').value = '';
     fileInput.value = '';
-    const fileNameDiv = document.getElementById('uploadedFileName');
-    if (fileNameDiv) fileNameDiv.textContent = '';
     
-    showNotification(`Congratulations! You got ${points} pts.`, 'success');
-    displayResources();
+    // Clear selected files list
+    if (typeof window.selectedFiles !== 'undefined') {
+        window.selectedFiles = [];
+    }
+    const filesListDiv = document.getElementById('uploadedFilesList');
+    if (filesListDiv) filesListDiv.innerHTML = '';
+    
+    // Refresh resources display to show all resources including the newly uploaded ones
+    currentPage = 1; // Reset to first page
+    if (typeof displayResources === 'function') {
+        displayResources();
+    }
+    
+    // Create notification message with all file names
+    let notificationMessage = `Congratulations! You got ${points} pts. Resource uploaded successfully!\n\nUploaded files:\n${uploadedFileNames.map((name, idx) => `${idx + 1}. ${name}`).join('\n')}\n\nYou can now search for it using University: ${university} and Course Code: ${courseCode}`;
+    
+    // Show notification with longer timeout for multiple files
+    const notification = document.getElementById('notification');
+    if (notification) {
+        const currentTime = Date.now();
+        if (currentTime - lastNotificationTime < NOTIFICATION_COOLDOWN) {
+            const timeToWait = NOTIFICATION_COOLDOWN - (currentTime - lastNotificationTime);
+            setTimeout(() => {
+                showNotification(notificationMessage, 'success');
+            }, timeToWait);
+            return;
+        }
+        
+        lastNotificationTime = currentTime;
+        // Support multi-line messages by converting \n to <br>
+        notification.innerHTML = notificationMessage.replace(/\n/g, '<br>');
+        notification.className = 'notification success';
+        notification.style.display = 'block';
+        
+        // Longer timeout for multi-file uploads (5 seconds for multiple files, 3 seconds for single)
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, totalFiles > 1 ? 5000 : 3000);
+    }
 }
 
 function showPointRules() {
     const modal = document.getElementById('rulesModal');
     if (modal) {
         modal.style.display = 'block';
+        // Re-initialize lucide icons when modal is shown
+        if (typeof lucide !== 'undefined') {
+            setTimeout(() => {
+                lucide.createIcons();
+            }, 50);
+        }
     }
 }
 
@@ -580,7 +687,11 @@ function showDownloadModal(resource, points) {
                 <p style="margin-bottom: 10px; font-size: 16px;">Are you sure you want to download this resource?</p>
                 <p style="margin-bottom: 15px; font-size: 16px;"><strong>${points} pts will be used to unlock this resource</strong></p>
                 <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-                    <div style="font-weight: 500; margin-bottom: 10px; color: #1565C0;">${resource.fileName}</div>
+                    <div style="font-weight: 500; margin-bottom: 10px; color: #1565C0;">
+                        ${resource.fileNames && Array.isArray(resource.fileNames) && resource.fileNames.length > 1 
+                            ? resource.fileNames.map((name) => `• ${name}`).join('<br>')
+                            : resource.fileName}
+                    </div>
                     <div style="color: #666; font-size: 14px;">${resource.description}</div>
                 </div>
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -626,9 +737,93 @@ function confirmDownload(resourceId, points) {
 }
 
 function reportResource(resourceId) {
-    if (confirm('Are you sure you want to report this resource?')) {
-        showNotification('Thanks for your report, the previous used study points for unlock this documentation will be returned once confirmed the reportation', 'success');
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'reportModal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Report Resource</h2>
+                <button class="close-btn" onclick="closeReportModal()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 500;">Please select the reason for reporting this resource:</label>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="reportReason" value="no-solution" style="margin-right: 10px;">
+                            <span>1. Doesn't have solution</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="reportReason" value="wrong-course" style="margin-right: 10px;">
+                            <span>2. Not belongs to the course</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="reportReason" value="repeated" style="margin-right: 10px;">
+                            <span>3. Repeated</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="reportReason" value="other" style="margin-right: 10px;">
+                            <span>4. Other reasons:</span>
+                        </label>
+                        <input type="text" id="otherReason" placeholder="Please specify other reasons" style="margin-left: 30px; padding: 8px; border: 1px solid #ddd; border-radius: 5px; width: calc(100% - 30px);" disabled>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="submit-btn" onclick="submitReport(${resourceId})" style="background-color: #4caf50;">Confirm</button>
+                    <button class="submit-btn" onclick="closeReportModal()" style="background-color: #666;">Cancel</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+    
+    // Enable/disable other reason input based on radio selection
+    const radioButtons = modal.querySelectorAll('input[name="reportReason"]');
+    const otherInput = modal.querySelector('#otherReason');
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'other') {
+                otherInput.disabled = false;
+                otherInput.focus();
+            } else {
+                otherInput.disabled = true;
+                otherInput.value = '';
+            }
+        });
+    });
+}
+
+function closeReportModal() {
+    const modal = document.getElementById('reportModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.remove();
     }
+}
+
+function submitReport(resourceId) {
+    const selectedReason = document.querySelector('input[name="reportReason"]:checked');
+    if (!selectedReason) {
+        showNotification('Please select a reason for reporting.', 'error');
+        return;
+    }
+    
+    let reasonText = '';
+    if (selectedReason.value === 'no-solution') {
+        reasonText = "Doesn't have solution";
+    } else if (selectedReason.value === 'wrong-course') {
+        reasonText = "Not belongs to the course";
+    } else if (selectedReason.value === 'repeated') {
+        reasonText = 'Repeated';
+    } else if (selectedReason.value === 'other') {
+        const otherInput = document.getElementById('otherReason');
+        reasonText = otherInput.value || 'Other reasons';
+    }
+    
+    closeReportModal();
+    showNotification('Thanks for your report, the previous used study points for unlock this documentation will be returned once confirmed the reportation', 'success');
 }
 
 // Leaderboard Functions
@@ -789,23 +984,88 @@ function searchFriend() {
     const userId = document.getElementById('friendUserId').value.replace(/-/g, '');
     
     if (userId.length !== 12 || !/^\d+$/.test(userId)) {
-        showNotification('Invalid user ID.', 'error');
+        showNotification('Invalid user ID. Please enter 12 digits.', 'error');
         return;
     }
     
-    // Mock adding friend
+    // Valid user: 123456789123, Chris Wong
+    const validUserId = '123456789123';
+    
+    if (userId === validUserId) {
+        // Show popup with user info
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.id = 'friendSearchModal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Search Result</h2>
+                    <button class="close-btn" onclick="closeFriendSearchModal()">&times;</button>
+                </div>
+                <div style="padding: 20px; text-align: center;">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; background-color: #1565C0; color: white; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 24px; margin: 0 auto 20px;">CW</div>
+                    <div style="font-size: 18px; font-weight: 500; margin-bottom: 10px;">Chris Wong</div>
+                    <div style="color: #666; margin-bottom: 20px;">User ID: 1234-5678-9123</div>
+                    <div style="margin-bottom: 20px;">Do you want to add this person as a friend?</div>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="submit-btn" onclick="confirmAddFriend('123456789123', 'Chris Wong')" style="background-color: #4caf50;">Yes</button>
+                        <button class="submit-btn" onclick="closeFriendSearchModal()" style="background-color: #666;">No</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+    } else {
+        // Show "no results found" popup
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.id = 'friendSearchModal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Search Result</h2>
+                    <button class="close-btn" onclick="closeFriendSearchModal()">&times;</button>
+                </div>
+                <div style="padding: 40px; text-align: center;">
+                    <div style="font-size: 18px; color: #666; margin-bottom: 20px;">No results found</div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+    }
+}
+
+function closeFriendSearchModal() {
+    const modal = document.getElementById('friendSearchModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.remove();
+    }
+}
+
+function confirmAddFriend(userId, username) {
     const formattedId = userId.match(/.{1,4}/g).join('-');
     const newFriend = {
         userId: formattedId,
-        username: 'New Friend',
+        username: username,
         status: 'offline',
         studyTime: '0h 0m'
     };
     
-    friends.push(newFriend);
-    displayFriends();
+    // Check if friend already exists
+    const exists = friends.some(f => f.userId === formattedId);
+    if (exists) {
+        showNotification('This friend is already in your list.', 'error');
+    } else {
+        friends.push(newFriend);
+        displayFriends();
+        showNotification('Friend added successfully.', 'success');
+    }
+    
+    closeFriendSearchModal();
     closeAddFriendModal();
-    showNotification('Friend added successfully.', 'success');
 }
 
 // Pagination
@@ -899,6 +1159,11 @@ function saveProfile() {
         if (userParticipantName) {
             userParticipantName.textContent = username;
         }
+        // Update the username input field to show the saved value
+        const usernameInput = document.getElementById('settingsUsername');
+        if (usernameInput) {
+            usernameInput.value = username;
+        }
         showNotification('Profile updated successfully.', 'success');
     }
 }
@@ -920,7 +1185,7 @@ function updateProfileIcon(file) {
         reader.onload = function(e) {
             const imageData = e.target.result;
             
-            // Persist immediately so other pages reflect change without clicking Save
+            // Store in localStorage for persistence
             localStorage.setItem('userProfileIcon', imageData);
             
             const iconEl = document.getElementById('profilePictureIcon');
@@ -942,10 +1207,10 @@ function updateProfileIcon(file) {
                 if (userIcon.tagName === 'IMG') {
                     userIcon.src = imageData;
                 } else {
-                    // Convert div to img (use image class to avoid blue background)
+                    // Convert div to img
                     const img = document.createElement('img');
                     img.src = imageData;
-                    img.className = 'user-icon-img';
+                    img.className = 'user-icon';
                     img.style.width = '50px';
                     img.style.height = '50px';
                     img.style.borderRadius = '50%';
@@ -970,8 +1235,7 @@ function updateProfileIcon(file) {
                             const img = document.createElement('img');
                             img.src = imageData;
                             img.style.cssText = icon.style.cssText;
-                            // ensure uploaded image uses image avatar class (no blue bg)
-                            img.className = ((icon.className || '') + ' user-icon-img').trim();
+                            img.className = icon.className;
                             img.id = icon.id || '';
                             icon.parentNode.replaceChild(img, icon);
                         }
@@ -993,18 +1257,20 @@ function updateProfileIcon(file) {
     }
 }
 
-// Replace resetProfileIcon with single consolidated immediate-reset implementation
 function resetProfileIcon() {
-    // Remove saved icon from localStorage immediately
+    // Remove saved icon from localStorage
     localStorage.removeItem('userProfileIcon');
     
-    // Reset to default abbreviation in settings preview
+    // Reset to default abbreviation
     const iconEl = document.getElementById('profilePictureIcon');
     const preview = document.getElementById('profilePreview');
-    const savedUsername = localStorage.getItem('currentUsername') || currentUser.username;
     
     if (iconEl) {
         iconEl.style.display = 'flex';
+        iconEl.style.alignItems = 'center';
+        iconEl.style.justifyContent = 'center';
+        iconEl.style.textAlign = 'center';
+        const savedUsername = localStorage.getItem('currentUsername') || currentUser.username;
         if (typeof getUserIconAbbreviation === 'function') {
             iconEl.textContent = getUserIconAbbreviation(savedUsername);
         } else {
@@ -1013,17 +1279,17 @@ function resetProfileIcon() {
     }
     if (preview) {
         preview.style.display = 'none';
-        preview.src = '';
-        preview.classList.remove('show');
     }
     
-    // Update user icon on home page immediately: replace image with abbreviation div
+    // Update user icon on home page
     const userIcon = document.getElementById('userIcon');
     if (userIcon) {
         if (userIcon.tagName === 'IMG') {
+            // Convert back to div with abbreviation
             const div = document.createElement('div');
             div.id = 'userIcon';
-            div.className = 'user-icon'; // keeps blue circle style for abbreviation
+            div.className = 'user-icon';
+            const savedUsername = localStorage.getItem('currentUsername') || currentUser.username;
             if (typeof getUserIconAbbreviation === 'function') {
                 div.textContent = getUserIconAbbreviation(savedUsername);
             } else {
@@ -1031,41 +1297,43 @@ function resetProfileIcon() {
             }
             userIcon.parentNode.replaceChild(div, userIcon);
         } else {
+            const savedUsername = localStorage.getItem('currentUsername') || currentUser.username;
             if (typeof getUserIconAbbreviation === 'function') {
                 userIcon.textContent = getUserIconAbbreviation(savedUsername);
             }
         }
     }
     
-    // Update participant icons back to abbreviation where applicable
+    // Update icon in study room participants if visible
     const participantIcons = document.querySelectorAll('.participant-icon');
+    const savedUsername = localStorage.getItem('currentUsername') || currentUser.username;
     participantIcons.forEach(icon => {
         const participantBlock = icon.closest('.participant-block');
         if (participantBlock) {
             const nameEl = participantBlock.querySelector('.participant-name');
             if (nameEl && nameEl.textContent === savedUsername) {
                 if (icon.tagName === 'IMG') {
+                    // Convert back to div with abbreviation
                     const div = document.createElement('div');
-                    div.className = icon.className.replace('user-icon-img', 'user-icon').trim();
+                    div.className = icon.className;
                     div.style.cssText = icon.style.cssText;
+                    div.id = icon.id || '';
                     if (typeof getUserIconAbbreviation === 'function') {
                         div.textContent = getUserIconAbbreviation(savedUsername);
                     } else {
                         div.textContent = 'JD';
                     }
                     icon.parentNode.replaceChild(div, icon);
-                } else {
-                    icon.style.display = 'flex';
                 }
             }
         }
     });
     
-    // Specific user participant icon
+    // Update user participant icon specifically
     const userParticipantIcon = document.getElementById('userParticipantIcon');
     if (userParticipantIcon && userParticipantIcon.tagName === 'IMG') {
         const div = document.createElement('div');
-        div.className = userParticipantIcon.className.replace('user-icon-img', 'user-icon').trim();
+        div.className = userParticipantIcon.className;
         div.style.cssText = userParticipantIcon.style.cssText;
         div.id = 'userParticipantIcon';
         if (typeof getUserIconAbbreviation === 'function') {

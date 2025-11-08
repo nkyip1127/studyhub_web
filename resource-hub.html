@@ -6,37 +6,37 @@
     <title>StudyHub - Resource Hub</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
     <nav class="top-nav">
         <div class="nav-logo">
-            <span class="material-symbols-outlined size-40">school</span>
+            <i data-lucide="graduation-cap" class="logo-icon" style="width: 28px; height: 28px;"></i>
             <span class="logo-text">StudyHub</span>
         </div>
-        <div class="nav-menu">            
+        <div class="nav-menu">
             <a href="home.html" class="nav-link">
-                <span class="material-symbols-outlined size-25">home</span>
+                <i data-lucide="house" class="nav-icon" style="width: 18px; height: 18px;"></i>
                 <span>Home</span>
             </a>
             <a href="study-room.html" class="nav-link">
-                <span class="material-symbols-outlined size-25">group</span>
+                <i data-lucide="users" class="nav-icon" style="width: 18px; height: 18px;"></i>
                 <span>Study Room</span>
             </a>
             <a href="resource-hub.html" class="nav-link active">
-                <span class="material-symbols-outlined size-25">library_books</span>
+                <i data-lucide="book-open" class="nav-icon" style="width: 18px; height: 18px;"></i>
                 <span>Resource Hub</span>
             </a>
             <a href="leaderboard.html" class="nav-link">
-                <span class="material-symbols-outlined size-25">leaderboard</span>
+                <i data-lucide="award" class="nav-icon" style="width: 18px; height: 18px;"></i>
                 <span>Leaderboard</span>
             </a>
             <a href="friends.html" class="nav-link">
-                <span class="material-symbols-outlined size-25">group_add</span>
+                <i data-lucide="user-plus" class="nav-icon" style="width: 18px; height: 18px;"></i>
                 <span>Friends</span>
             </a>
             <a href="settings.html" class="nav-link">
-                <span class="material-symbols-outlined size-25">settings</span>
+                <i data-lucide="settings" class="nav-icon" style="width: 18px; height: 18px;"></i>
                 <span>Settings</span>
             </a>
         </div>
@@ -48,9 +48,9 @@
             <div style="font-size: 32px; font-weight: 700;" id="resourceHubStudyPoints">100</div>
         </div>
         <div class="upload-section">
-            <div>
+            <div style="display: flex; gap: 10px; align-items: center;">
                 <button class="create-btn" onclick="uploadResource()">Upload Resources</button>
-                <button class="rules-btn" onclick="showPointRules()" style="margin-left: 10px;">Study Point Rules in Resource Hub</button>
+                <button class="rules-btn" onclick="showPointRules()">Study Point Rules in Resource Hub</button>
             </div>
         </div>
 
@@ -133,10 +133,10 @@
                 <div class="form-group">
                     <label>Upload Document</label>
                     <div class="file-upload" onclick="document.getElementById('fileInput').click()">
-                        <p>Click to upload or drag and drop</p>
-                        <input type="file" id="fileInput" style="display: none;" onchange="showUploadedFileName(this)">
+                        <p>Click to upload or drag and drop (Multiple files allowed)</p>
+                        <input type="file" id="fileInput" multiple style="display: none;" onchange="showUploadedFiles(this)">
                     </div>
-                    <div id="uploadedFileName" style="margin-top: 10px; color: #1565C0; font-weight: 500;"></div>
+                    <div id="uploadedFilesList" style="margin-top: 10px;"></div>
                 </div>
                 <button class="submit-btn" onclick="submitUpload()">Upload</button>
             </div>
@@ -153,7 +153,7 @@
             <div class="rules-content">
                 <div class="rules-section">
                     <div class="rules-section-header">
-                        <span class="rules-icon">📤</span>
+                        <i data-lucide="upload" class="rules-icon" style="width: 24px; height: 24px;"></i>
                         <h3>Upload</h3>
                     </div>
                     <div class="rules-list">
@@ -195,7 +195,7 @@
                 
                 <div class="rules-section">
                     <div class="rules-section-header">
-                        <span class="rules-icon">🔓</span>
+                        <i data-lucide="unlock" class="rules-icon" style="width: 24px; height: 24px;"></i>
                         <h3>Unlock</h3>
                     </div>
                     <div class="rules-list">
@@ -241,13 +241,65 @@
     <div id="notification" class="notification"></div>
     <script src="app.js"></script>
     <script>
-        function showUploadedFileName(input) {
-            const fileNameDiv = document.getElementById('uploadedFileName');
-            if (input.files && input.files[0]) {
-                fileNameDiv.textContent = 'Selected: ' + input.files[0].name;
-            } else {
-                fileNameDiv.textContent = '';
+        // Store selected files (make it globally accessible)
+        window.selectedFiles = [];
+        
+        function showUploadedFiles(input) {
+            const filesListDiv = document.getElementById('uploadedFilesList');
+            if (!filesListDiv) return;
+            
+            // Add new files to selectedFiles array
+            if (input.files && input.files.length > 0) {
+                Array.from(input.files).forEach(file => {
+                    // Check if file is already in the list
+                    if (!window.selectedFiles.find(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)) {
+                        window.selectedFiles.push(file);
+                    }
+                });
             }
+            
+            // Update the file input to reflect all selected files
+            updateFileInput();
+            displaySelectedFiles();
+        }
+        
+        window.removeFile = function(index) {
+            window.selectedFiles.splice(index, 1);
+            updateFileInput();
+            displaySelectedFiles();
+        }
+        
+        function updateFileInput() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput) return;
+            
+            // Create a new DataTransfer object to set files
+            const dataTransfer = new DataTransfer();
+            window.selectedFiles.forEach(file => {
+                dataTransfer.items.add(file);
+            });
+            fileInput.files = dataTransfer.files;
+        }
+        
+        function displaySelectedFiles() {
+            const filesListDiv = document.getElementById('uploadedFilesList');
+            if (!filesListDiv) return;
+            
+            if (window.selectedFiles.length === 0) {
+                filesListDiv.innerHTML = '';
+                return;
+            }
+            
+            filesListDiv.innerHTML = '<div style="font-weight: 500; margin-bottom: 8px; color: #1565C0;">Selected Files:</div>';
+            window.selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background-color: #f5f5f5; border-radius: 5px; margin-bottom: 5px;';
+                fileItem.innerHTML = `
+                    <span style="flex: 1; color: #333; font-size: 14px;">${file.name}</span>
+                    <button type="button" onclick="removeFile(${index})" style="background-color: #f44336; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 10px;">Remove</button>
+                `;
+                filesListDiv.appendChild(fileItem);
+            });
         }
         
         function toggleSolutionCheckbox() {
@@ -276,9 +328,28 @@
                     resourceHubPoints.textContent = currentUser.studyPoints.toLocaleString();
                 }
             }
+            // Initialize lucide icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
             
             if (typeof displayResources === 'function') {
                 displayResources();
+            }
+            
+            // Re-initialize lucide icons when rules modal is opened
+            const rulesModal = document.getElementById('rulesModal');
+            if (rulesModal && typeof MutationObserver !== 'undefined') {
+                const observer = new MutationObserver(function(mutations) {
+                    if (rulesModal.style.display === 'block') {
+                        if (typeof lucide !== 'undefined') {
+                            setTimeout(() => {
+                                lucide.createIcons();
+                            }, 50);
+                        }
+                    }
+                });
+                observer.observe(rulesModal, { attributes: true, attributeFilter: ['style'] });
             }
         };
         

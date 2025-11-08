@@ -6,12 +6,17 @@
     <title>StudyHub - Login</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
     <div class="login-container">
         <div class="login-box">
-            <h1>StudyHub</h1>
-            <form id="loginForm">
+            <h1>
+                <i data-lucide="graduation-cap" style="display: inline-block; vertical-align: middle; margin-right: 8px; width: 28px; height: 28px;"></i>
+                StudyHub
+            </h1>
+            <!-- Login Form -->
+            <form id="loginForm" style="display: block;">
                 <div class="form-row">
                     <label for="username">Username</label>
                     <input type="text" id="username" name="username" required>
@@ -22,7 +27,29 @@
                 </div>
                 <div class="form-actions">
                     <button type="button" class="forgot-password-btn" onclick="showForgotPasswordModal()">Forgot Password</button>
-                    <button type="submit" class="login-btn">Login</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" class="signup-btn" onclick="showSignUpForm()" style="background-color: #4caf50; color: white; border: none; padding: 14px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500; flex: 1; transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease; box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3); white-space: nowrap;" onmouseover="this.style.backgroundColor='#45a049'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(76, 175, 80, 0.4)'" onmouseout="this.style.backgroundColor='#4caf50'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(76, 175, 80, 0.3)'" onmousedown="this.style.transform='translateY(0)'" onmouseup="this.style.transform='translateY(-1px)'">Sign Up</button>
+                        <button type="submit" class="login-btn" style="flex: 1;">Login</button>
+                    </div>
+                </div>
+            </form>
+            <!-- Sign Up Form -->
+            <form id="signUpForm" style="display: none;">
+                <div class="form-row">
+                    <label for="signupUsername">User Name</label>
+                    <input type="text" id="signupUsername" name="signupUsername" required>
+                </div>
+                <div class="form-row">
+                    <label for="signupEmail">Email</label>
+                    <input type="email" id="signupEmail" name="signupEmail" required>
+                </div>
+                <div class="form-row">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" name="signupPassword" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="forgot-password-btn" onclick="showLoginForm()">Back to Login</button>
+                    <button type="submit" class="login-btn" style="width: 100%;">Sign Up</button>
                 </div>
             </form>
         </div>
@@ -67,11 +94,56 @@
             showNotification('Password reset link will be sent to your email.', 'success');
         }
         
+        function showSignUpForm() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('signUpForm').style.display = 'block';
+        }
+        
+        function showLoginForm() {
+            document.getElementById('signUpForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+        }
+        
+        const signUpForm = document.getElementById('signUpForm');
+        if (signUpForm) {
+            signUpForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const username = document.getElementById('signupUsername').value;
+                const email = document.getElementById('signupEmail').value;
+                const password = document.getElementById('signupPassword').value;
+                
+                if (!username || !email || !password) {
+                    showNotification('Please fill in all fields.', 'error');
+                    return;
+                }
+                
+                // Set user information from sign up
+                if (typeof currentUser !== 'undefined') {
+                    currentUser.username = username;
+                    currentUser.email = email;
+                    // Generate a user ID (12 digits)
+                    currentUser.userId = Math.floor(100000000000 + Math.random() * 900000000000).toString().replace(/(\d{4})(\d{4})(\d{4})/, '$1-$2-$3');
+                    // Save to localStorage
+                    localStorage.setItem('currentUsername', username);
+                    localStorage.setItem('currentUserEmail', email);
+                    localStorage.setItem('currentUserId', currentUser.userId);
+                }
+                
+                // Redirect to homepage
+                window.location.href = 'home.html';
+            });
+        }
+        
         window.onclick = function(event) {
             const modal = document.getElementById('forgotPasswordModal');
             if (event.target === modal) {
                 closeForgotPasswordModal();
             }
+        }
+        
+        // Initialize lucide icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
         }
     </script>
 </body>
