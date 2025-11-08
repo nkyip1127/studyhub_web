@@ -27,7 +27,7 @@ let isSearchingRooms = false;
 function initMockData() {
     // Study Rooms (at least 15 examples)
     studyRooms = [
-        { id: '123456', name: 'EE4213 Study Group', topic: 'Digital Signal Processing', participants: 15, maxParticipants: 20, isPublic: true, createdTime: '10h 03m', password: null },
+        { id: '123456', name: 'EE4213 Study Group', topic: 'Human Computer Interaction', participants: 15, maxParticipants: 20, isPublic: true, createdTime: '10h 03m', password: null },
         { id: '234567', name: 'MA1200 Calculus', topic: 'Linear Algebra', participants: 8, maxParticipants: 15, isPublic: true, createdTime: '5h 20m', password: null },
         { id: '345678', name: 'CS101 Programming', topic: 'Python Basics', participants: 20, maxParticipants: 20, isPublic: true, createdTime: '15h 45m', password: null },
         { id: '456789', name: 'Physics Study Room', topic: 'Quantum Mechanics', participants: 12, maxParticipants: 18, isPublic: true, createdTime: '8h 30m', password: null },
