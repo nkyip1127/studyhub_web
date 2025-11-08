@@ -160,6 +160,12 @@ function updateUserInfo() {
     if (studyStreakEl) studyStreakEl.textContent = currentUser.studyStreak + ' days';
     if (userNameEl) userNameEl.textContent = currentUser.username;
     if (welcomeMessageEl) welcomeMessageEl.textContent = `Welcome to StudyHub! ${currentUser.username}`;
+
+    // <-- new: populate settings username input so saved name shows on settings page
+    const settingsUsernameInput = document.getElementById('settingsUsername');
+    if (settingsUsernameInput) {
+        settingsUsernameInput.value = currentUser.username;
+    }
     
     // Load saved profile icon from localStorage, or use abbreviation
     if (userIconEl) {
@@ -172,7 +178,7 @@ function updateUserInfo() {
                 // Convert div to img
                 const img = document.createElement('img');
                 img.src = savedIcon;
-                img.className = 'user-icon';
+                img.className = 'user-icon-img';
                 img.style.width = '50px';
                 img.style.height = '50px';
                 img.style.borderRadius = '50%';
@@ -914,7 +920,7 @@ function updateProfileIcon(file) {
         reader.onload = function(e) {
             const imageData = e.target.result;
             
-            // Store in localStorage for persistence
+            // Persist immediately so other pages reflect change without clicking Save
             localStorage.setItem('userProfileIcon', imageData);
             
             const iconEl = document.getElementById('profilePictureIcon');
@@ -936,10 +942,10 @@ function updateProfileIcon(file) {
                 if (userIcon.tagName === 'IMG') {
                     userIcon.src = imageData;
                 } else {
-                    // Convert div to img
+                    // Convert div to img (use image class to avoid blue background)
                     const img = document.createElement('img');
                     img.src = imageData;
-                    img.className = 'user-icon';
+                    img.className = 'user-icon-img';
                     img.style.width = '50px';
                     img.style.height = '50px';
                     img.style.borderRadius = '50%';
@@ -964,7 +970,8 @@ function updateProfileIcon(file) {
                             const img = document.createElement('img');
                             img.src = imageData;
                             img.style.cssText = icon.style.cssText;
-                            img.className = icon.className;
+                            // ensure uploaded image uses image avatar class (no blue bg)
+                            img.className = ((icon.className || '') + ' user-icon-img').trim();
                             img.id = icon.id || '';
                             icon.parentNode.replaceChild(img, icon);
                         }
@@ -986,17 +993,18 @@ function updateProfileIcon(file) {
     }
 }
 
+// Replace resetProfileIcon with single consolidated immediate-reset implementation
 function resetProfileIcon() {
-    // Remove saved icon from localStorage
+    // Remove saved icon from localStorage immediately
     localStorage.removeItem('userProfileIcon');
     
-    // Reset to default abbreviation
+    // Reset to default abbreviation in settings preview
     const iconEl = document.getElementById('profilePictureIcon');
     const preview = document.getElementById('profilePreview');
+    const savedUsername = localStorage.getItem('currentUsername') || currentUser.username;
     
     if (iconEl) {
-        iconEl.style.display = 'block';
-        const savedUsername = localStorage.getItem('currentUsername') || currentUser.username;
+        iconEl.style.display = 'flex';
         if (typeof getUserIconAbbreviation === 'function') {
             iconEl.textContent = getUserIconAbbreviation(savedUsername);
         } else {
@@ -1005,17 +1013,17 @@ function resetProfileIcon() {
     }
     if (preview) {
         preview.style.display = 'none';
+        preview.src = '';
+        preview.classList.remove('show');
     }
     
-    // Update user icon on home page
+    // Update user icon on home page immediately: replace image with abbreviation div
     const userIcon = document.getElementById('userIcon');
     if (userIcon) {
         if (userIcon.tagName === 'IMG') {
-            // Convert back to div with abbreviation
             const div = document.createElement('div');
             div.id = 'userIcon';
-            div.className = 'user-icon';
-            const savedUsername = localStorage.getItem('currentUsername') || currentUser.username;
+            div.className = 'user-icon'; // keeps blue circle style for abbreviation
             if (typeof getUserIconAbbreviation === 'function') {
                 div.textContent = getUserIconAbbreviation(savedUsername);
             } else {
@@ -1023,43 +1031,41 @@ function resetProfileIcon() {
             }
             userIcon.parentNode.replaceChild(div, userIcon);
         } else {
-            const savedUsername = localStorage.getItem('currentUsername') || currentUser.username;
             if (typeof getUserIconAbbreviation === 'function') {
                 userIcon.textContent = getUserIconAbbreviation(savedUsername);
             }
         }
     }
     
-    // Update icon in study room participants if visible
+    // Update participant icons back to abbreviation where applicable
     const participantIcons = document.querySelectorAll('.participant-icon');
-    const savedUsername = localStorage.getItem('currentUsername') || currentUser.username;
     participantIcons.forEach(icon => {
         const participantBlock = icon.closest('.participant-block');
         if (participantBlock) {
             const nameEl = participantBlock.querySelector('.participant-name');
             if (nameEl && nameEl.textContent === savedUsername) {
                 if (icon.tagName === 'IMG') {
-                    // Convert back to div with abbreviation
                     const div = document.createElement('div');
-                    div.className = icon.className;
+                    div.className = icon.className.replace('user-icon-img', 'user-icon').trim();
                     div.style.cssText = icon.style.cssText;
-                    div.id = icon.id || '';
                     if (typeof getUserIconAbbreviation === 'function') {
                         div.textContent = getUserIconAbbreviation(savedUsername);
                     } else {
                         div.textContent = 'JD';
                     }
                     icon.parentNode.replaceChild(div, icon);
+                } else {
+                    icon.style.display = 'flex';
                 }
             }
         }
     });
     
-    // Update user participant icon specifically
+    // Specific user participant icon
     const userParticipantIcon = document.getElementById('userParticipantIcon');
     if (userParticipantIcon && userParticipantIcon.tagName === 'IMG') {
         const div = document.createElement('div');
-        div.className = userParticipantIcon.className;
+        div.className = userParticipantIcon.className.replace('user-icon-img', 'user-icon').trim();
         div.style.cssText = userParticipantIcon.style.cssText;
         div.id = 'userParticipantIcon';
         if (typeof getUserIconAbbreviation === 'function') {
