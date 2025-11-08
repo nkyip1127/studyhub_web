@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHub - Leaderboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-logo">
+            <span class="logo-icon">📚</span>
+            <span class="logo-text">StudyHub</span>
+        </div>
+        <div class="nav-menu">
+            <a href="home.html" class="nav-link">
+                <span class="nav-icon">🏠</span>
+                <span>Home</span>
+            </a>
+            <a href="study-room.html" class="nav-link">
+                <span class="nav-icon">📖</span>
+                <span>Study Room</span>
+            </a>
+            <a href="resource-hub.html" class="nav-link">
+                <span class="nav-icon">📁</span>
+                <span>Resource Hub</span>
+            </a>
+            <a href="leaderboard.html" class="nav-link active">
+                <span class="nav-icon">🏆</span>
+                <span>Leaderboard</span>
+            </a>
+            <a href="friends.html" class="nav-link">
+                <span class="nav-icon">👥</span>
+                <span>Friends</span>
+            </a>
+            <a href="settings.html" class="nav-link">
+                <span class="nav-icon">⚙️</span>
+                <span>Settings</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="color: #1565C0; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <span>🏆</span>
+                <span id="weekDate">Weekly Leaderboard: </span>
+            </h2>
+        </div>
+
+        <div class="leaderboard-section">
+            <div class="leaderboard-panel">
+                <div class="leaderboard-header">
+                    <div class="leaderboard-title">This Week Global Leaderboard</div>
+                    <div class="leaderboard-date" id="globalDate"></div>
+                </div>
+                <div id="globalLeaderboard" class="leaderboard-list"></div>
+            </div>
+
+            <div class="leaderboard-panel">
+                <div class="leaderboard-header">
+                    <div class="leaderboard-title">This Week Friends Leaderboard</div>
+                    <div class="leaderboard-date" id="friendsDate"></div>
+                </div>
+                <div id="friendsLeaderboard" class="leaderboard-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+    <script src="app.js"></script>
+    <script>
+        window.onload = function() {
+            // Set current week date
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const diff = today.getDate() - dayOfWeek;
+            const monday = new Date(today.setDate(diff));
+            const sunday = new Date(today.setDate(diff + 6));
+            
+            const formatDate = (date) => {
+                return `${date.getDate()}/${date.getMonth() + 1}`;
+            };
+            
+            const weekDateStr = `${formatDate(monday)} to ${formatDate(sunday)}`;
+            document.getElementById('weekDate').textContent = `Weekly Leaderboard: ${weekDateStr}`;
+            document.getElementById('globalDate').textContent = weekDateStr;
+            document.getElementById('friendsDate').textContent = weekDateStr;
+            
+            displayLeaderboard();
+        };
+    </script>
+</body>
+</html>
+

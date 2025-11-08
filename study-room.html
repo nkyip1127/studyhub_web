@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHub - Study Room</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-logo">
+            <span class="logo-icon">📚</span>
+            <span class="logo-text">StudyHub</span>
+        </div>
+        <div class="nav-menu">
+            <a href="home.html" class="nav-link">
+                <span class="nav-icon">🏠</span>
+                <span>Home</span>
+            </a>
+            <a href="study-room.html" class="nav-link active">
+                <span class="nav-icon">📖</span>
+                <span>Study Room</span>
+            </a>
+            <a href="resource-hub.html" class="nav-link">
+                <span class="nav-icon">📁</span>
+                <span>Resource Hub</span>
+            </a>
+            <a href="leaderboard.html" class="nav-link">
+                <span class="nav-icon">🏆</span>
+                <span>Leaderboard</span>
+            </a>
+            <a href="friends.html" class="nav-link">
+                <span class="nav-icon">👥</span>
+                <span>Friends</span>
+            </a>
+            <a href="settings.html" class="nav-link">
+                <span class="nav-icon">⚙️</span>
+                <span>Settings</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">Study Room</h1>
+            <button class="create-btn" onclick="createStudyRoom()">Create Study Room</button>
+        </div>
+
+        <div class="search-section">
+            <div class="search-bar">
+                <input type="text" id="roomSearch" placeholder="Search by Room ID or Name..." onkeyup="if(event.key==='Enter') searchStudyRooms()">
+                <button class="search-btn" onclick="searchStudyRooms()">Search</button>
+            </div>
+        </div>
+
+        <div id="studyRoomsContainer" class="rooms-grid"></div>
+        <div id="studyRoomsPagination" class="pagination"></div>
+    </div>
+
+    <!-- Create Room Modal -->
+    <div id="createRoomModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Study Room</h2>
+                <button class="close-btn" onclick="closeCreateRoomModal()">&times;</button>
+            </div>
+            <div class="modal-form">
+                <div class="form-group">
+                    <label for="roomName">Room Name</label>
+                    <input type="text" id="roomName" placeholder="Enter room name (optional)">
+                </div>
+                <div class="form-group">
+                    <label for="roomTopic">Topic</label>
+                    <input type="text" id="roomTopic" placeholder="Enter topic (optional)">
+                </div>
+                <div class="form-group">
+                    <div class="toggle-switch">
+                        <label>Private</label>
+                        <label class="switch">
+                            <input type="checkbox" id="roomPrivacy">
+                            <span class="slider"></span>
+                        </label>
+                        <label>Public</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="maxParticipants">Max Participants</label>
+                    <select id="maxParticipants">
+                        <option value="1" selected>1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                        <option value="13">13</option>
+                        <option value="14">14</option>
+                        <option value="15">15</option>
+                        <option value="16">16</option>
+                        <option value="17">17</option>
+                        <option value="18">18</option>
+                        <option value="19">19</option>
+                        <option value="20" selected>20</option>
+                    </select>
+                </div>
+                <button class="submit-btn" onclick="submitCreateRoom()">Create Room</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+    <script src="app.js"></script>
+    <script>
+        window.onload = function() {
+            // Ensure data is initialized
+            if (typeof initMockData === 'function') {
+                initMockData();
+            }
+            if (typeof displayStudyRooms === 'function') {
+                displayStudyRooms();
+            }
+        };
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('createRoomModal');
+            if (event.target === modal) {
+                closeCreateRoomModal();
+            }
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHub - Study Room</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-logo">
+            <span class="logo-icon">📚</span>
+            <span class="logo-text">StudyHub</span>
+        </div>
+        <div class="nav-menu">
+            <a href="home.html" class="nav-link">
+                <span class="nav-icon">🏠</span>
+                <span>Home</span>
+            </a>
+            <a href="study-room.html" class="nav-link active">
+                <span class="nav-icon">📖</span>
+                <span>Study Room</span>
+            </a>
+            <a href="resource-hub.html" class="nav-link">
+                <span class="nav-icon">📁</span>
+                <span>Resource Hub</span>
+            </a>
+            <a href="leaderboard.html" class="nav-link">
+                <span class="nav-icon">🏆</span>
+                <span>Leaderboard</span>
+            </a>
+            <a href="friends.html" class="nav-link">
+                <span class="nav-icon">👥</span>
+                <span>Friends</span>
+            </a>
+            <a href="settings.html" class="nav-link">
+                <span class="nav-icon">⚙️</span>
+                <span>Settings</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="room-interface">
+            <div class="room-header">
+                <div class="room-title" id="roomTitle">Study Room</div>
+                <div class="room-info" id="roomInfo"></div>
+            </div>
+
+            <div class="room-stats">
+                <div class="room-stat">
+                    <div class="room-stat-label">Total Study Time in Room</div>
+                    <div class="room-stat-value" id="roomStudyTime">0m</div>
+                </div>
+                <div class="room-stat">
+                    <div class="room-stat-label">Room Created</div>
+                    <div class="room-stat-value" id="roomCreatedTime">10h 03m</div>
+                </div>
+            </div>
+
+            <div class="participants-grid" id="participantsGrid"></div>
+
+            <button class="leave-btn" onclick="leaveStudyRoom()">Leave</button>
+        </div>
+    </div>
+
+    <!-- Alert Notification -->
+    <div id="studyRoomAlert" class="alert-notification">
+        <div class="alert-message">You have been in this study room for 50 minutes. Are you still here?</div>
+        <button class="alert-confirm-btn" onclick="confirmStillHere()">Confirm</button>
+    </div>
+
+    <div id="notification" class="notification"></div>
+    <script src="app.js"></script>
+    <script>
+        // Load room data
+        window.onload = function() {
+            // Ensure data is initialized
+            if (typeof initMockData === 'function') {
+                initMockData();
+            }
+            
+            const roomDataStr = sessionStorage.getItem('currentRoom');
+            const roomData = roomDataStr ? JSON.parse(roomDataStr) : {};
+            console.log('Room data loaded:', roomData);
+            if (roomData && roomData.id) {
+                document.getElementById('roomTitle').textContent = roomData.name;
+                document.getElementById('roomCreatedTime').textContent = roomData.createdTime + ' ago';
+                
+                const roomInfo = document.getElementById('roomInfo');
+                roomInfo.innerHTML = `
+                    <div>Topic: ${roomData.topic || 'No topic'}</div>
+                    <div class="room-id-section">
+                        <span>Room ID: <strong>${roomData.id}</strong></span>
+                        <button class="copy-btn" onclick="copyRoomId('${roomData.id}')">Copy</button>
+                    </div>
+                `;
+                
+                if (roomData.password) {
+                    roomInfo.innerHTML += `
+                        <div class="room-password-section">
+                            <span>Password: <strong>${roomData.password}</strong></span>
+                            <button class="copy-btn" onclick="copyRoomPassword('${roomData.password}')">Copy</button>
+                        </div>
+                    `;
+                }
+                
+                // Generate participants (mock data) - include current user
+                try {
+                    const participantsGrid = document.getElementById('participantsGrid');
+                    console.log('Participants grid element:', participantsGrid);
+                    if (!participantsGrid) {
+                        console.error('participantsGrid element not found');
+                    } else {
+                        participantsGrid.innerHTML = '';
+                        // When user joins, participant count should include the user
+                        // If room shows 15/20, that means 15 participants already exist
+                        // When user joins, total becomes 16 (user + 15 others)
+                        // For quick access rooms (maxParticipants = 1), only show the user
+                        // Ensure we have a valid participants count
+                        let originalCount = 0;
+                        if (roomData.participants !== undefined && roomData.participants !== null) {
+                            originalCount = parseInt(roomData.participants) || 0;
+                        }
+                        // For quick access rooms (maxParticipants = 1), only show the user (originalCount should be 0)
+                        // For other rooms, add 1 for the current user joining
+                        const isQuickAccessRoom = roomData.maxParticipants === 1;
+                        let participantCount;
+                        if (isQuickAccessRoom) {
+                            // Quick access room - only show the user
+                            participantCount = 1;
+                        } else {
+                            // Regular room - add 1 for the current user joining
+                            participantCount = Math.max(1, originalCount + 1);
+                        }
+                        console.log('Participant count:', participantCount, 'Original count:', originalCount);
+                        
+                        // Access currentUser from app.js
+                        let currentUsername = 'John Doe';
+                        try {
+                            // Check localStorage first for updated username
+                            const savedUsername = localStorage.getItem('currentUsername');
+                            if (savedUsername) {
+                                currentUsername = savedUsername;
+                            } else if (typeof currentUser !== 'undefined' && currentUser.username) {
+                                currentUsername = currentUser.username;
+                            }
+                        } catch(e) {
+                            // Fallback to default
+                        }
+                        
+                        // Helper function to get icon abbreviation
+                        function getIconAbbr(name) {
+                            const parts = name.split(' ');
+                            if (parts.length >= 2) {
+                                return (parts[0][0] + parts[1][0]).toUpperCase();
+                            }
+                            return name.substring(0, 2).toUpperCase();
+                        }
+                        
+                        // Helper function to format time
+                        function formatTime(minutes) {
+                            const hours = Math.floor(minutes / 60);
+                            const mins = minutes % 60;
+                            if (hours > 0) {
+                                return `${hours}h ${mins}m`;
+                            }
+                            return `${mins}m`;
+                        }
+                        
+                        // Parse room created time to get max minutes
+                        function parseRoomTime(timeStr) {
+                            const match = timeStr.match(/(\d+)h\s*(\d+)m/);
+                            if (match) {
+                                return parseInt(match[1]) * 60 + parseInt(match[2]);
+                            }
+                            const match2 = timeStr.match(/(\d+)h/);
+                            if (match2) {
+                                return parseInt(match2[1]) * 60;
+                            }
+                            const match3 = timeStr.match(/(\d+)m/);
+                            if (match3) {
+                                return parseInt(match3[1]);
+                            }
+                            return 90; // Default 90 minutes
+                        }
+                        
+                        const roomCreatedMinutes = parseRoomTime(roomData.createdTime || '10h 03m');
+                        
+                        // Mock participant names (user is first)
+                        const otherParticipantNames = ['Alice Chen', 'Bob Zhang', 'Charlie Wong', 'Diana Lee', 'Eric Liu', 'Fiona Tan', 'George Wang', 'Helen Ng', 'Ivan Chan', 'Julia Ho', 'Kevin Ma', 'Lisa Wu', 'Mike Chen', 'Nancy Li', 'Oscar Zhang', 'Peter Wang', 'Quinn Liu', 'Rachel Tan', 'Steve Ho'];
+                        
+                        // Always create at least 1 participant (the current user)
+                        let blocksCreated = 0;
+                        for (let i = 0; i < 20; i++) {
+                            const participantBlock = document.createElement('div');
+                            if (i < participantCount) {
+                                participantBlock.className = 'participant-block';
+                                // First participant is always the current user
+                                const isCurrentUser = (i === 0);
+                                const name = isCurrentUser ? currentUsername : (otherParticipantNames[i - 1] || `User ${i + 1}`);
+                                const iconAbbr = getIconAbbr(name);
+                                
+                                let timeStr;
+                                if (isCurrentUser) {
+                                    // User's time comes from the adjustable input (will be updated via updateStudyTime)
+                                    timeStr = '0m'; // Initial value, will be updated
+                                } else {
+                                    // Other participants get random time (1-90 minutes, but not exceeding room created time)
+                                    const maxTime = Math.min(90, roomCreatedMinutes);
+                                    const randomMinutes = Math.floor(Math.random() * maxTime) + 1;
+                                    timeStr = formatTime(randomMinutes);
+                                }
+                                
+                                // Get user icon from localStorage if available
+                                let iconHTML = '';
+                                const savedIcon = localStorage.getItem('userProfileIcon');
+                                if (isCurrentUser && savedIcon) {
+                                    iconHTML = `<img src="${savedIcon}" alt="${name}" style="width: 50px; height: 50px; border-radius: 50%; margin: 0 auto 10px; display: block; object-fit: cover;" class="participant-icon" id="userParticipantIcon">`;
+                                } else {
+                                    iconHTML = `<div class="participant-icon" style="width: 50px; height: 50px; border-radius: 50%; background-color: #1565C0; color: white; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 16px; margin: 0 auto 10px;">${iconAbbr}</div>`;
+                                }
+                                
+                                participantBlock.innerHTML = `
+                                    ${iconHTML}
+                                    <div class="participant-name" ${isCurrentUser ? 'id="userParticipantName"' : ''}>${name}</div>
+                                    <div class="participant-time" ${isCurrentUser ? 'id="userParticipantTime"' : ''}>${timeStr}</div>
+                                `;
+                                participantsGrid.appendChild(participantBlock);
+                                blocksCreated++;
+                            } else {
+                                participantBlock.className = 'participant-block empty';
+                                participantsGrid.appendChild(participantBlock);
+                            }
+                        }
+                        console.log('Created', blocksCreated, 'participant blocks. Grid children:', participantsGrid.children.length);
+                    }
+                } catch(error) {
+                    console.error('Error generating participants:', error);
+                }
+                
+                // Initialize study time
+                updateStudyTime();
+                
+                // Check for 50-minute alert periodically
+                setInterval(() => {
+                    checkStudyTimeAlert();
+                }, 1000); // Check every second
+            } else {
+                window.location.href = 'study-room.html';
+            }
+        };
+        
+        function updateStudyTime() {
+            const display = document.getElementById('roomStudyTime');
+            const userTimeDisplay = document.getElementById('userParticipantTime');
+            if (display && typeof currentStudyRoomTime !== 'undefined') {
+                const minutes = currentStudyRoomTime || 0;
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                let timeStr;
+                if (hours > 0) {
+                    timeStr = `${hours}h ${mins}m`;
+                } else {
+                    timeStr = `${mins}m`;
+                }
+                display.textContent = timeStr;
+                // Update user's time in participant list
+                if (userTimeDisplay) {
+                    userTimeDisplay.textContent = timeStr;
+                }
+                checkStudyTimeAlert();
+            }
+        }
+        
+        let alertShown = false;
+        let kickTimer = null;
+        let lastAlertTriggerTime = 0;
+        const ALERT_COOLDOWN = 15000; // 15 seconds cooldown before showing alert again
+        
+        function checkStudyTimeAlert() {
+            const alert = document.getElementById('studyRoomAlert');
+            if (alert && typeof currentStudyRoomTime !== 'undefined') {
+                const minutes = currentStudyRoomTime || 0;
+                const currentTime = Date.now();
+                
+                if (minutes >= 50) {
+                    // Check if enough time has passed since last alert trigger (cooldown)
+                    if (!alertShown && (currentTime - lastAlertTriggerTime >= ALERT_COOLDOWN)) {
+                        // First time showing the alert (after cooldown)
+                        alert.style.display = 'block';
+                        alertShown = true;
+                        lastAlertTriggerTime = currentTime;
+                        // Start timer to auto-kick after 2 minutes (120 seconds) if not confirmed /demo 8 seconds for testing 
+                        if (kickTimer) {
+                            clearTimeout(kickTimer); // Clear any existing timer
+                        }
+                        kickTimer = setTimeout(() => {
+                            kickFromStudyRoom();
+                        }, 8000); // 8 seconds for testing (in real app should be 2 minutes)
+                    } else if (alertShown) {
+                        // Alert already shown - keep it visible and ensure kick timer is running
+                        alert.style.display = 'block';
+                        // Ensure kick timer is still running (in case it was cleared somehow)
+                        if (!kickTimer) {
+                            kickTimer = setTimeout(() => {
+                                kickFromStudyRoom();
+                            }, 8000); // 8 seconds for testing (in real app should be 2 minutes)
+                        }
+                    }
+                } else if (minutes < 50) {
+                    // Hide alert if time drops below 50 minutes
+                    alert.style.display = 'none';
+                    alertShown = false;
+                    lastAlertTriggerTime = 0; // Reset trigger time
+                    if (kickTimer) {
+                        clearTimeout(kickTimer);
+                        kickTimer = null;
+                    }
+                }
+            }
+        }
+        
+        function confirmStillHere() {
+            const alert = document.getElementById('studyRoomAlert');
+            if (alert) {
+                alert.style.display = 'none';
+                alertShown = false;
+                // Clear the kick timer
+                if (kickTimer) {
+                    clearTimeout(kickTimer);
+                    kickTimer = null;
+                }
+                // Show "Keep going!" message for 2-3 seconds
+                showNotification('Keep going!', 'success');
+            }
+        }
+        
+        function kickFromStudyRoom() {
+            // Clear the kick timer to prevent multiple calls
+            if (kickTimer) {
+                clearTimeout(kickTimer);
+                kickTimer = null;
+            }
+            
+            // Reset study time to 0
+            if (typeof currentStudyRoomTime !== 'undefined') {
+                currentStudyRoomTime = 0;
+                updateStudyTime();
+            }
+            
+            // Hide alert
+            const alert = document.getElementById('studyRoomAlert');
+            if (alert) {
+                alert.style.display = 'none';
+                alertShown = false;
+            }
+            
+            // Show notification
+            showNotification('You have been automatically removed from the study room.', 'error');
+            
+            // Redirect to study room list after a short delay
+            setTimeout(() => {
+                sessionStorage.removeItem('currentRoom');
+                window.location.href = 'study-room.html';
+            }, 2000);
+        }
+        
+        function leaveStudyRoom() {
+            if (confirm('Are you sure you want to leave this study room?')) {
+                sessionStorage.removeItem('currentRoom');
+                window.location.href = 'study-room.html';
+            }
+        }
+    </script>
+</body>
+</html>
+

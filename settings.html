@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHub - Settings</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-logo">
+            <span class="logo-icon">📚</span>
+            <span class="logo-text">StudyHub</span>
+        </div>
+        <div class="nav-menu">
+            <a href="home.html" class="nav-link">
+                <span class="nav-icon">🏠</span>
+                <span>Home</span>
+            </a>
+            <a href="study-room.html" class="nav-link">
+                <span class="nav-icon">📖</span>
+                <span>Study Room</span>
+            </a>
+            <a href="resource-hub.html" class="nav-link">
+                <span class="nav-icon">📁</span>
+                <span>Resource Hub</span>
+            </a>
+            <a href="leaderboard.html" class="nav-link">
+                <span class="nav-icon">🏆</span>
+                <span>Leaderboard</span>
+            </a>
+            <a href="friends.html" class="nav-link">
+                <span class="nav-icon">👥</span>
+                <span>Friends</span>
+            </a>
+            <a href="settings.html" class="nav-link active">
+                <span class="nav-icon">⚙️</span>
+                <span>Settings</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="settings-section">
+            <h2>Profile Settings</h2>
+            <div class="settings-form">
+                <div class="profile-picture-section">
+                    <div class="profile-picture-display">
+                        <div class="profile-picture-icon" id="profilePictureIcon">JD</div>
+                        <img src="" alt="Profile" class="profile-preview" id="profilePreview" style="display: none;">
+                    </div>
+                    <div class="profile-picture-upload">
+                        <button type="button" class="change-icon-btn" onclick="triggerFileInput()">
+                            <span style="margin-right: 8px;">📷</span>
+                            <span>Change Icon</span>
+                        </button>
+                        <button type="button" class="reset-icon-btn" onclick="resetProfileIcon()" style="margin-top: 10px; background-color: #666; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                            Reset to Default
+                        </button>
+                        <input type="file" id="profilePicture" accept="image/*" onchange="updateProfileIcon(this)" style="display: none;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="settingsUsername">Username</label>
+                    <input type="text" id="settingsUsername" value="John Doe">
+                </div>
+                <button class="submit-btn" onclick="saveProfile()">Save Changes</button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2>Email Settings</h2>
+            <div class="settings-form">
+                <div class="form-group">
+                    <label for="currentEmail">Enter Current Email</label>
+                    <input type="email" id="currentEmail" value="john.doe@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="newEmail">Enter New Email</label>
+                    <input type="email" id="newEmail">
+                </div>
+                <div class="form-group">
+                    <label for="confirmEmail">Confirm New Email</label>
+                    <input type="email" id="confirmEmail">
+                </div>
+                <button class="submit-btn" onclick="saveEmail()">Save Changes</button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2>Password Settings</h2>
+            <div class="settings-form">
+                <div class="form-group">
+                    <label for="currentPassword">Enter Current Password</label>
+                    <input type="password" id="currentPassword">
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">Enter New Password</label>
+                    <input type="password" id="newPassword">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm New Password</label>
+                    <input type="password" id="confirmPassword">
+                </div>
+                <button class="submit-btn" onclick="savePassword()">Save Changes</button>
+            </div>
+        </div>
+
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div id="notification" class="notification"></div>
+    <script src="app.js"></script>
+    <script>
+        // Make label clickable - use onclick to avoid multiple event listeners
+        function triggerFileInput() {
+            const fileInput = document.getElementById('profilePicture');
+            if (fileInput) {
+                fileInput.click();
+            }
+        }
+        
+        window.onload = function() {
+            // Set default profile icon to user abbreviation
+            if (typeof currentUser !== 'undefined' && typeof getUserIconAbbreviation === 'function') {
+                const iconEl = document.getElementById('profilePictureIcon');
+                if (iconEl) {
+                    iconEl.textContent = getUserIconAbbreviation(currentUser.username);
+                }
+            }
+        };
+    </script>
+</body>
+</html>
+

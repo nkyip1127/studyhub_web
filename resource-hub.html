@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHub - Resource Hub</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-logo">
+            <span class="logo-icon">📚</span>
+            <span class="logo-text">StudyHub</span>
+        </div>
+        <div class="nav-menu">
+            <a href="home.html" class="nav-link">
+                <span class="nav-icon">🏠</span>
+                <span>Home</span>
+            </a>
+            <a href="study-room.html" class="nav-link">
+                <span class="nav-icon">📖</span>
+                <span>Study Room</span>
+            </a>
+            <a href="resource-hub.html" class="nav-link active">
+                <span class="nav-icon">📁</span>
+                <span>Resource Hub</span>
+            </a>
+            <a href="leaderboard.html" class="nav-link">
+                <span class="nav-icon">🏆</span>
+                <span>Leaderboard</span>
+            </a>
+            <a href="friends.html" class="nav-link">
+                <span class="nav-icon">👥</span>
+                <span>Friends</span>
+            </a>
+            <a href="settings.html" class="nav-link">
+                <span class="nav-icon">⚙️</span>
+                <span>Settings</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="study-points-banner" style="background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Your Study Points</div>
+            <div style="font-size: 32px; font-weight: 700;" id="resourceHubStudyPoints">100</div>
+        </div>
+        <div class="upload-section">
+            <div>
+                <button class="create-btn" onclick="uploadResource()">Upload Resources</button>
+                <button class="rules-btn" onclick="showPointRules()" style="margin-left: 10px;">Study Point Rules in Resource Hub</button>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="resourceUniversity">University</label>
+                    <select id="resourceUniversity">
+                        <option value="">All Universities</option>
+                        <option value="City University of Hong Kong">City University of Hong Kong</option>
+                        <option value="Hong Kong Baptist University">Hong Kong Baptist University</option>
+                        <option value="Lingnan University">Lingnan University</option>
+                        <option value="The Chinese University of Hong Kong">The Chinese University of Hong Kong</option>
+                        <option value="The Education University of Hong Kong">The Education University of Hong Kong</option>
+                        <option value="The Hong Kong Polytechnic University">The Hong Kong Polytechnic University</option>
+                        <option value="The Hong Kong University of Science and Technology">The Hong Kong University of Science and Technology</option>
+                        <option value="The University of Hong Kong">The University of Hong Kong</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="resourceCourseCode">Course Code</label>
+                    <input type="text" id="resourceCourseCode" placeholder="e.g. EE4213">
+                </div>
+                <div class="filter-group" style="display: flex; align-items: flex-end;">
+                    <button class="search-btn" onclick="searchResources()">Search</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="resourcesContainer" class="resources-grid"></div>
+        <div id="resourcesPagination" class="pagination"></div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Upload Resource</h2>
+                <button class="close-btn" onclick="closeUploadModal()">&times;</button>
+            </div>
+            <div class="modal-form">
+                <div class="form-group">
+                    <label for="uploadUniversity">University</label>
+                    <select id="uploadUniversity" required>
+                        <option value="">Select University</option>
+                        <option value="City University of Hong Kong">City University of Hong Kong</option>
+                        <option value="Hong Kong Baptist University">Hong Kong Baptist University</option>
+                        <option value="Lingnan University">Lingnan University</option>
+                        <option value="The Chinese University of Hong Kong">The Chinese University of Hong Kong</option>
+                        <option value="The Education University of Hong Kong">The Education University of Hong Kong</option>
+                        <option value="The Hong Kong Polytechnic University">The Hong Kong Polytechnic University</option>
+                        <option value="The Hong Kong University of Science and Technology">The Hong Kong University of Science and Technology</option>
+                        <option value="The University of Hong Kong">The University of Hong Kong</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="uploadCourseCode">Course Code</label>
+                    <input type="text" id="uploadCourseCode" placeholder="e.g. EE4213" required>
+                </div>
+                <div class="form-group">
+                    <label for="uploadDescription">Description</label>
+                    <input type="text" id="uploadDescription" placeholder="e.g. This resource provides the solution of hw1 in sem A 2024." required>
+                </div>
+                <div class="form-group">
+                    <label for="uploadType">Type</label>
+                    <select id="uploadType" required onchange="toggleSolutionCheckbox()">
+                        <option value="">Select Type</option>
+                        <option value="Lab Report">Lab Report/Tutorial</option>
+                        <option value="Lecture Notes">Lecture Notes</option>
+                        <option value="Past Papers">Past Papers</option>
+                        <option value="Homework">Homework/Assignment</option>
+                        <option value="Others">Others</option>
+                    </select>
+                </div>
+                <div class="form-group" id="solutionCheckboxGroup">
+                    <label>
+                        <input type="checkbox" id="uploadSolution"> Solution Available
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Upload Document</label>
+                    <div class="file-upload" onclick="document.getElementById('fileInput').click()">
+                        <p>Click to upload or drag and drop</p>
+                        <input type="file" id="fileInput" style="display: none;" onchange="showUploadedFileName(this)">
+                    </div>
+                    <div id="uploadedFileName" style="margin-top: 10px; color: #1565C0; font-weight: 500;"></div>
+                </div>
+                <button class="submit-btn" onclick="submitUpload()">Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Study Point Rules in Resource Hub</h2>
+                <button class="close-btn" onclick="closeRulesModal()">&times;</button>
+            </div>
+            <div class="rules-content">
+                <div class="rules-section">
+                    <div class="rules-section-header">
+                        <span class="rules-icon">📤</span>
+                        <h3>Upload</h3>
+                    </div>
+                    <div class="rules-list">
+                        <div class="rule-item upload-rule">
+                            <div class="rule-type">Past Paper</div>
+                            <div class="rule-details">
+                                <span class="rule-points positive">+300 pts</span>
+                                <span class="rule-note">* with solution: +100 more pts</span>
+                            </div>
+                        </div>
+                        <div class="rule-item upload-rule">
+                            <div class="rule-type">Homework/Assignment</div>
+                            <div class="rule-details">
+                                <span class="rule-points positive">+200 pts</span>
+                                <span class="rule-note">* with solution: +100 more pts</span>
+                            </div>
+                        </div>
+                        <div class="rule-item upload-rule">
+                            <div class="rule-type">Lab Report/Tutorial</div>
+                            <div class="rule-details">
+                                <span class="rule-points positive">+150 pts</span>
+                                <span class="rule-note">* with solution: +100 more pts</span>
+                            </div>
+                        </div>
+                        <div class="rule-item upload-rule">
+                            <div class="rule-type">Lecture Notes</div>
+                            <div class="rule-details">
+                                <span class="rule-points positive">+100 pts</span>
+                            </div>
+                        </div>
+                        <div class="rule-item upload-rule">
+                            <div class="rule-type">Others</div>
+                            <div class="rule-details">
+                                <span class="rule-points positive">+50 pts</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="rules-section">
+                    <div class="rules-section-header">
+                        <span class="rules-icon">🔓</span>
+                        <h3>Unlock</h3>
+                    </div>
+                    <div class="rules-list">
+                        <div class="rule-item unlock-rule">
+                            <div class="rule-type">Past Paper</div>
+                            <div class="rule-details">
+                                <span class="rule-points negative">-300 pts</span>
+                                <span class="rule-note">* with solution: -100 more pts</span>
+                            </div>
+                        </div>
+                        <div class="rule-item unlock-rule">
+                            <div class="rule-type">Homework/Assignment</div>
+                            <div class="rule-details">
+                                <span class="rule-points negative">-200 pts</span>
+                                <span class="rule-note">* with solution: -100 more pts</span>
+                            </div>
+                        </div>
+                        <div class="rule-item unlock-rule">
+                            <div class="rule-type">Lab Report/Tutorial</div>
+                            <div class="rule-details">
+                                <span class="rule-points negative">-150 pts</span>
+                                <span class="rule-note">* with solution: -100 more pts</span>
+                            </div>
+                        </div>
+                        <div class="rule-item unlock-rule">
+                            <div class="rule-type">Lecture Notes</div>
+                            <div class="rule-details">
+                                <span class="rule-points negative">-100 pts</span>
+                            </div>
+                        </div>
+                        <div class="rule-item unlock-rule">
+                            <div class="rule-type">Others</div>
+                            <div class="rule-details">
+                                <span class="rule-points negative">-50 pts</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+    <script src="app.js"></script>
+    <script>
+        function showUploadedFileName(input) {
+            const fileNameDiv = document.getElementById('uploadedFileName');
+            if (input.files && input.files[0]) {
+                fileNameDiv.textContent = 'Selected: ' + input.files[0].name;
+            } else {
+                fileNameDiv.textContent = '';
+            }
+        }
+        
+        function toggleSolutionCheckbox() {
+            const typeSelect = document.getElementById('uploadType');
+            const solutionGroup = document.getElementById('solutionCheckboxGroup');
+            if (typeSelect.value === 'Lecture Notes' || typeSelect.value === 'Others') {
+                solutionGroup.style.display = 'none';
+                document.getElementById('uploadSolution').checked = false;
+            } else {
+                solutionGroup.style.display = 'block';
+            }
+        }
+        
+        window.onload = function() {
+            // Ensure data is initialized
+            if (typeof initMockData === 'function') {
+                initMockData();
+            }
+            
+            // Update study points display
+            if (typeof updateResourceHubStudyPoints === 'function') {
+                updateResourceHubStudyPoints();
+            } else if (typeof currentUser !== 'undefined') {
+                const resourceHubPoints = document.getElementById('resourceHubStudyPoints');
+                if (resourceHubPoints) {
+                    resourceHubPoints.textContent = currentUser.studyPoints.toLocaleString();
+                }
+            }
+            
+            if (typeof displayResources === 'function') {
+                displayResources();
+            }
+        };
+        
+        window.onclick = function(event) {
+            const uploadModal = document.getElementById('uploadModal');
+            const rulesModal = document.getElementById('rulesModal');
+            if (event.target === uploadModal) {
+                closeUploadModal();
+            }
+            if (event.target === rulesModal) {
+                closeRulesModal();
+            }
+        }
+    </script>
+</body>
+</html>
+

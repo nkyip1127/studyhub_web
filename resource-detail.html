@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHub - Resource Detail</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-logo">
+            <span class="logo-icon">📚</span>
+            <span class="logo-text">StudyHub</span>
+        </div>
+        <div class="nav-menu">
+            <a href="home.html" class="nav-link">
+                <span class="nav-icon">🏠</span>
+                <span>Home</span>
+            </a>
+            <a href="study-room.html" class="nav-link">
+                <span class="nav-icon">📖</span>
+                <span>Study Room</span>
+            </a>
+            <a href="resource-hub.html" class="nav-link active">
+                <span class="nav-icon">📁</span>
+                <span>Resource Hub</span>
+            </a>
+            <a href="leaderboard.html" class="nav-link">
+                <span class="nav-icon">🏆</span>
+                <span>Leaderboard</span>
+            </a>
+            <a href="friends.html" class="nav-link">
+                <span class="nav-icon">👥</span>
+                <span>Friends</span>
+            </a>
+            <a href="settings.html" class="nav-link">
+                <span class="nav-icon">⚙️</span>
+                <span>Settings</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="study-points-banner" style="background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Your Study Points</div>
+            <div style="font-size: 32px; font-weight: 700;" id="resourceDetailStudyPoints">100</div>
+        </div>
+        <div class="resource-detail-header">
+            <div class="resource-detail-title" id="resourceTitle">University - Course Code</div>
+        </div>
+
+        <div class="type-filter" id="typeFilter">
+            <button class="type-btn active" data-type="all" onclick="filterByType('all')">All</button>
+            <button class="type-btn" data-type="Lab Report" onclick="filterByType('Lab Report')">Lab Report/Tutorial</button>
+            <button class="type-btn" data-type="Lecture Notes" onclick="filterByType('Lecture Notes')">Lecture Notes</button>
+            <button class="type-btn" data-type="Past Papers" onclick="filterByType('Past Papers')">Past Papers</button>
+            <button class="type-btn" data-type="Homework" onclick="filterByType('Homework')">Homework/Assignment</button>
+            <button class="type-btn" data-type="Others" onclick="filterByType('Others')">Others</button>
+        </div>
+
+        <div id="resourceItemsContainer"></div>
+        <div id="resourceItemsPagination" class="pagination"></div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+    <script src="app.js"></script>
+    <script>
+        let selectedType = 'all';
+        let currentResource = null;
+        let filteredResources = [];
+
+        // Make filterByType globally accessible
+        window.filterByType = function(type) {
+            selectedType = type;
+            const buttons = document.querySelectorAll('.type-btn');
+            buttons.forEach(btn => {
+                // Remove active class from all buttons (also remove 'action' if it exists by mistake)
+                btn.classList.remove('active');
+                btn.classList.remove('action');
+                // Use data-type attribute for reliable matching
+                const btnType = btn.getAttribute('data-type');
+                // Compare and add active class to matching button
+                if (btnType && btnType.trim() === type.trim()) {
+                    // Explicitly add 'active' class
+                    btn.classList.add('active');
+                }
+            });
+            displayResourceItems();
+        };
+
+        window.onload = function() {
+            // Ensure data is initialized
+            if (typeof initMockData === 'function') {
+                initMockData();
+            }
+            
+            // Update study points display
+            if (typeof updateResourceHubStudyPoints === 'function') {
+                updateResourceHubStudyPoints();
+            } else if (typeof currentUser !== 'undefined') {
+                const resourceDetailPoints = document.getElementById('resourceDetailStudyPoints');
+                if (resourceDetailPoints) {
+                    resourceDetailPoints.textContent = currentUser.studyPoints.toLocaleString();
+                }
+            }
+            
+            currentResource = JSON.parse(sessionStorage.getItem('selectedResource') || '{}');
+            if (currentResource.id) {
+                document.getElementById('resourceTitle').textContent = 
+                    `${currentResource.university} - ${currentResource.courseCode}`;
+                
+                // Filter resources by university and course code
+                filteredResources = resources.filter(r => 
+                    r.university === currentResource.university && 
+                    r.courseCode === currentResource.courseCode
+                );
+                
+                displayResourceItems();
+            } else {
+                window.location.href = 'resource-hub.html';
+            }
+        };
+
+        function displayResourceItems() {
+            const container = document.getElementById('resourceItemsContainer');
+            if (!container) return;
+
+            let itemsToShow = filteredResources;
+            if (selectedType !== 'all') {
+                itemsToShow = filteredResources.filter(r => r.type === selectedType);
+            }
+
+            container.innerHTML = '';
+            itemsToShow.forEach(resource => {
+                const resourceItem = document.createElement('div');
+                resourceItem.className = 'resource-item';
+                resourceItem.innerHTML = `
+                    <div class="resource-file-name">${resource.fileName}</div>
+                    <div class="resource-description">${resource.description}</div>
+                    <div class="resource-solution">
+                        <span class="${resource.solutionAvailable ? 'solution-available' : 'solution-unavailable'}">
+                            ${resource.solutionAvailable ? '✓ Solution Available' : '✗ Solution Not Available'}
+                        </span>
+                    </div>
+                    <div class="resource-actions">
+                        <button class="download-btn" onclick="downloadResource(${resource.id})">Download</button>
+                        <button class="report-btn" onclick="reportResource(${resource.id})">Report</button>
+                    </div>
+                `;
+                container.appendChild(resourceItem);
+            });
+        }
+    </script>
+</body>
+</html>
+

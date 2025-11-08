@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHub - Home</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-logo">
+            <span class="logo-icon">📚</span>
+            <span class="logo-text">StudyHub</span>
+        </div>
+        <div class="nav-menu">
+            <a href="home.html" class="nav-link active">
+                <span class="nav-icon">🏠</span>
+                <span>Home</span>
+            </a>
+            <a href="study-room.html" class="nav-link">
+                <span class="nav-icon">📖</span>
+                <span>Study Room</span>
+            </a>
+            <a href="resource-hub.html" class="nav-link">
+                <span class="nav-icon">📁</span>
+                <span>Resource Hub</span>
+            </a>
+            <a href="leaderboard.html" class="nav-link">
+                <span class="nav-icon">🏆</span>
+                <span>Leaderboard</span>
+            </a>
+            <a href="friends.html" class="nav-link">
+                <span class="nav-icon">👥</span>
+                <span>Friends</span>
+            </a>
+            <a href="settings.html" class="nav-link">
+                <span class="nav-icon">⚙️</span>
+                <span>Settings</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header-section">
+            <div class="user-info">
+                <div class="user-icon" id="userIcon">JD</div>
+                <div>
+                    <div class="user-name" id="userName">John Doe</div>
+                    <div class="user-id-section">
+                        <span class="user-id" id="userId">1234-1234-1234</span>
+                        <button class="copy-btn" onclick="copyUserId()">Copy</button>
+                    </div>
+                </div>
+            </div>
+            <div class="study-points">
+                <span class="points-label">Study Points</span>
+                <span class="points-value" id="studyPoints">2,450</span>
+            </div>
+        </div>
+
+        <div class="welcome-message">
+            <h2 id="welcomeMessage">Welcome to StudyHub! John Doe</h2>
+        </div>
+
+        <div class="stats-section">
+            <div class="stat-block">
+                <div class="stat-label">Total Study Time</div>
+                <div class="stat-value" id="totalStudyTime">128h 20m</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-label">This Week</div>
+                <div class="stat-value" id="thisWeekTime">5h 15m</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-label">Study Streak</div>
+                <div class="stat-value" id="studyStreak">7 days</div>
+            </div>
+        </div>
+
+        <div class="missions-section">
+            <div class="mission-panel">
+                <div class="mission-header">
+                    <h3>Daily Mission</h3>
+                    <span class="mission-progress" id="dailyProgress">1 of 3 missions completed</span>
+                </div>
+                <div class="mission-list">
+                    <div class="mission-item completed">
+                        <div class="mission-text-row">
+                            <span class="mission-text">Login daily</span>
+                            <span class="mission-points">+10 pts</span>
+                        </div>
+                    </div>
+                    <div class="mission-item">
+                        <div class="mission-content">
+                            <div class="mission-text-row">
+                                <span class="mission-text">Enter study room & study each 60 mins</span>
+                                <span class="mission-points">+15 pts</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-wrapper">
+                                    <div class="progress-bar-completed" style="width: 40%"></div>
+                                    <div class="progress-bar-remaining" style="width: 60%"></div>
+                                </div>
+                                <span class="progress-text">24m / 60m (40%)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mission-item">
+                        <div class="mission-content">
+                            <div class="mission-text-row">
+                                <span class="mission-text">Join study room with friends & stay 15 mins</span>
+                                <span class="mission-points">+20 pts</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-wrapper">
+                                    <div class="progress-bar-completed" style="width: 60%"></div>
+                                    <div class="progress-bar-remaining" style="width: 40%"></div>
+                                </div>
+                                <span class="progress-text">9m / 15m (60%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mission-panel">
+                <div class="mission-header">
+                    <h3>Weekly Mission</h3>
+                    <span class="mission-progress" id="weeklyProgress">2 of 4 missions completed</span>
+                </div>
+                <div class="mission-list">
+                    <div class="mission-item">
+                        <div class="mission-text-row">
+                            <span class="mission-text">Enter the first 100 ranking on weekly global leaderboard</span>
+                            <span class="mission-points">+100 pts</span>
+                        </div>
+                    </div>
+                    <div class="mission-item completed">
+                        <div class="mission-text-row">
+                            <span class="mission-text">Enter the first 3 ranking on weekly friend leaderboard</span>
+                            <span class="mission-points">+75 pts</span>
+                        </div>
+                    </div>
+                    <div class="mission-item completed">
+                        <div class="mission-text-row">
+                            <span class="mission-text">Upload at least 3 useful study resources</span>
+                            <span class="mission-points">+60 pts</span>
+                        </div>
+                    </div>
+                    <div class="mission-item completed">
+                        <div class="mission-content">
+                            <div class="mission-text-row">
+                                <span class="mission-text">Achieve total study time for seven hours in a week</span>
+                                <span class="mission-points">+50 pts</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-wrapper">
+                                    <div class="progress-bar-completed" style="width: 100%"></div>
+                                    <!-- <div class="progress-bar-remaining" style="width: 25%"></div> -->
+                                </div>
+                                <span class="progress-text">7h / 7h (100%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+    <script src="app.js"></script>
+    <script>
+        window.onload = function() {
+            // Ensure data is initialized
+            if (typeof initMockData === 'function') {
+                initMockData();
+            }
+            if (typeof updateUserInfo === 'function') {
+                updateUserInfo();
+            }
+        };
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHub - Friends</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-logo">
+            <span class="logo-icon">📚</span>
+            <span class="logo-text">StudyHub</span>
+        </div>
+        <div class="nav-menu">
+            <a href="home.html" class="nav-link">
+                <span class="nav-icon">🏠</span>
+                <span>Home</span>
+            </a>
+            <a href="study-room.html" class="nav-link">
+                <span class="nav-icon">📖</span>
+                <span>Study Room</span>
+            </a>
+            <a href="resource-hub.html" class="nav-link">
+                <span class="nav-icon">📁</span>
+                <span>Resource Hub</span>
+            </a>
+            <a href="leaderboard.html" class="nav-link">
+                <span class="nav-icon">🏆</span>
+                <span>Leaderboard</span>
+            </a>
+            <a href="friends.html" class="nav-link active">
+                <span class="nav-icon">👥</span>
+                <span>Friends</span>
+            </a>
+            <a href="settings.html" class="nav-link">
+                <span class="nav-icon">⚙️</span>
+                <span>Settings</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="friends-header">
+            <h1 class="page-title">Friends</h1>
+            <button class="create-btn" onclick="addFriend()">Add Friend</button>
+        </div>
+
+        <div id="friendsContainer" class="friends-list"></div>
+    </div>
+
+    <!-- Add Friend Modal -->
+    <div id="addFriendModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Friend</h2>
+                <button class="close-btn" onclick="closeAddFriendModal()">&times;</button>
+            </div>
+            <div class="modal-form">
+                <div class="form-group">
+                    <label for="friendUserId">Search User (12 digits)</label>
+                    <input type="text" id="friendUserId" placeholder="1234-1234-1234" maxlength="14" 
+                           oninput="formatUserId(this)">
+                </div>
+                <button class="submit-btn" onclick="searchFriend()">Search</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+    <script src="app.js"></script>
+    <script>
+        window.onload = function() {
+            // Ensure data is initialized
+            if (typeof initMockData === 'function') {
+                initMockData();
+            }
+            if (typeof displayFriends === 'function') {
+                displayFriends();
+            }
+        };
+        
+        function formatUserId(input) {
+            let value = input.value.replace(/-/g, '');
+            if (value.length > 12) value = value.slice(0, 12);
+            // Format as 4-4-4 for 12 digits
+            if (value.length > 0) {
+                let formatted = '';
+                for (let i = 0; i < value.length; i += 4) {
+                    if (i > 0) formatted += '-';
+                    formatted += value.slice(i, i + 4);
+                }
+                input.value = formatted;
+            } else {
+                input.value = value;
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('addFriendModal');
+            if (event.target === modal) {
+                closeAddFriendModal();
+            }
+        }
+    </script>
+</body>
+</html>
+
