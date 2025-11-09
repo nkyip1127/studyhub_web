@@ -199,8 +199,10 @@
                         const otherParticipantNames = ['Alice Chen', 'Bob Zhang', 'Charlie Wong', 'Diana Lee', 'Eric Liu', 'Fiona Tan', 'George Wang', 'Helen Ng', 'Ivan Chan', 'Julia Ho', 'Kevin Ma', 'Lisa Wu', 'Mike Chen', 'Nancy Li', 'Oscar Zhang', 'Peter Wang', 'Quinn Liu', 'Rachel Tan', 'Steve Ho'];
                         
                         // Always create at least 1 participant (the current user)
+                        // Use maxParticipants from room data to limit the number of blocks
+                        const maxBlocks = roomData.maxParticipants || 20;
                         let blocksCreated = 0;
-                        for (let i = 0; i < 20; i++) {
+                        for (let i = 0; i < maxBlocks; i++) {
                             const participantBlock = document.createElement('div');
                             if (i < participantCount) {
                                 participantBlock.className = 'participant-block';
