@@ -23,6 +23,26 @@ let itemsPerPage = 10;
 let filteredStudyRooms = [];
 let isSearchingRooms = false;
 
+let friendRequests = [];
+const savedRequests = localStorage.getItem('friendRequests');
+if (savedRequests) {
+  try {
+    friendRequests = JSON.parse(savedRequests);
+  } catch (e) {
+    // fallback to default if corrupted
+    friendRequests = [
+      { userId: '5555-5555-6666', username: 'Kevin Lam', status: 'waiting', studyTime: '45h 5m' },
+      { userId: '8888-2222-1444', username: 'Maggie Ho', status: 'waiting', studyTime: '25h 5m' }
+    ];
+  }
+} else {
+  friendRequests = [
+    { userId: '5555-5555-6666-3333', username: 'Kevin Lam', status: 'waiting', studyTime: '5h 8m' },
+    { userId: '8888-2222-1444-9999', username: 'Maggie Ho', status: 'waiting', studyTime: '67h 25m' }
+  ];
+  localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
+}
+
 // Initialize mock data
 function initMockData() {
     // Load uploaded resources from localStorage
@@ -961,6 +981,7 @@ function displayFriends() {
                 <div class="friend-status ${friend.status}">${friend.status === 'online' ? 'Online' : 'Offline'}</div>
                 <div class="friend-time">Total Study Time: ${friend.studyTime}</div>
             </div>
+<button class="remove-btn" style="background-color:#f44336;color:white;border-radius:5px;padding:7px 15px" onclick="removeFriend('${friend.userId}')">Remove</button>
         `;
         container.appendChild(friendCard);
     });
@@ -1066,6 +1087,40 @@ function confirmAddFriend(userId, username) {
     
     closeFriendSearchModal();
     closeAddFriendModal();
+}
+
+function acceptFriendRequest(userId) {
+  friendRequests = friendRequests.filter(f => f.userId !== userId);
+  localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
+  updateRequestCount();
+  closeFriendRequestsModal();
+  showNotification('Friend accepted!', 'success');
+}
+
+function declineFriendRequest(userId) {
+  friendRequests = friendRequests.filter(f => f.userId !== userId);
+  localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
+  updateRequestCount();
+  closeFriendRequestsModal();
+  showNotification('Friend request declined.', 'error');
+}
+
+function updateRequestCount() {
+  const requestCount = document.getElementById('requestCount');
+  if (requestCount) {
+    if (friendRequests.length > 0) {
+      requestCount.textContent = friendRequests.length;
+      requestCount.style.display = 'inline-block';
+    } else {
+      requestCount.style.display = 'none';
+    }
+  }
+}
+
+function removeFriend(userId) {
+  friends = friends.filter(f => f.userId !== userId);
+  displayFriends();
+  showNotification('Friend removed.', 'success'); // If you use notifications elsewhere
 }
 
 // Pagination
@@ -1818,4 +1873,3 @@ window.initMissionsAndSchedules = initMissionsAndSchedules;
 
 // Initialize on load
 try { initMissionsAndSchedules(); } catch (e) {}
-
