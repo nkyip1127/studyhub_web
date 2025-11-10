@@ -784,6 +784,7 @@ function showDownloadModal(resource, points) {
             <div style="padding: 20px;">
                 <p style="margin-bottom: 10px; font-size: 16px;">Are you sure you want to download this resource?</p>
                 <p style="margin-bottom: 15px; font-size: 16px;"><strong>${points} pts will be used to unlock this resource</strong></p>
+                <p style="margin-bottom: 15px; font-size: 16px;"><strong>Study Points Left: ${currentUser.studyPoints}</strong></p>
                 <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
                     <div style="font-weight: 500; margin-bottom: 10px; color: #1565C0;">
                         ${resource.fileNames && Array.isArray(resource.fileNames) && resource.fileNames.length > 1 
