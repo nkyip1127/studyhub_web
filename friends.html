@@ -43,9 +43,13 @@
     </nav>
 
     <div class="container">
-        <div class="friends-header">
-            <h1 class="page-title">Friends</h1>
+        <div class="friends-header" style="display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
             <button class="create-btn" onclick="addFriend()">Add Friend</button>
+            <button class="rules-btn" id="friendRequestsBtn" style="min-width:unset; position:relative;">
+                <i data-lucide="bell" style="margin-right:4px;color:#ff9800;width:20px;height:20px;vertical-align:middle;"></i>
+                Friend Requests
+                <span id="requestCount" style="background:#ff9800;color:white;border-radius:10px;padding:2px 8px;font-size:12px;vertical-align:top;margin-left:6px;display:none;"></span>
+            </button>
         </div>
 
         <div id="friendsContainer" class="friends-list"></div>
@@ -61,7 +65,7 @@
             <div class="modal-form">
                 <div class="form-group">
                     <label for="friendUserId">Search User (12 digits)</label>
-                    <input type="text" id="friendUserId" placeholder="1234-1234-1234" maxlength="14" 
+                    <input type="text" id="friendUserId" placeholder="1234-1234-1234" maxlength="14"
                            oninput="formatUserId(this)">
                 </div>
                 <button class="submit-btn" onclick="searchFriend()">Search</button>
@@ -69,27 +73,31 @@
         </div>
     </div>
 
+    <!-- Modal for friend requests (content rendered by JS only) -->
+    <div id="genericModal" class="modal" style="display:none;"></div>
     <div id="notification" class="notification"></div>
     <script src="app.js"></script>
     <script>
         window.onload = function() {
-            // Ensure data is initialized
             if (typeof initMockData === 'function') {
                 initMockData();
             }
             if (typeof displayFriends === 'function') {
                 displayFriends();
             }
-            // Initialize lucide icons
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
+            var requestsBtn = document.getElementById('friendRequestsBtn');
+            if(requestsBtn) {
+                requestsBtn.onclick = function() {
+                    if(typeof showFriendRequests === 'function') showFriendRequests();
+                };
+            }
         };
-        
         function formatUserId(input) {
             let value = input.value.replace(/-/g, '');
             if (value.length > 12) value = value.slice(0, 12);
-            // Format as 4-4-4 for 12 digits
             if (value.length > 0) {
                 let formatted = '';
                 for (let i = 0; i < value.length; i += 4) {
@@ -101,14 +109,16 @@
                 input.value = value;
             }
         }
-
         window.onclick = function(event) {
             const modal = document.getElementById('addFriendModal');
             if (event.target === modal) {
                 closeAddFriendModal();
             }
+            const gModal = document.getElementById("genericModal");
+            if (event.target === gModal) {
+                gModal.style.display = "none";
+            }
         }
     </script>
 </body>
 </html>
-
