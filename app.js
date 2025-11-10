@@ -133,7 +133,12 @@ function initMockData() {
 // Login functionality
 document.addEventListener('DOMContentLoaded', function() {
     initMockData();
-    
+
+     var requestsBtn = document.getElementById('friendRequestsBtn');
+    if (requestsBtn) {
+        requestsBtn.onclick = renderFriendRequestsModal;
+    }
+
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', function(e) {
@@ -1091,7 +1096,6 @@ function confirmAddFriend(userId, username) {
 
 function acceptFriendRequest(userId) {
   friendRequests = friendRequests.filter(f => f.userId !== userId);
-  localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
   updateRequestCount();
   closeFriendRequestsModal();
   showNotification('Friend accepted!', 'success');
@@ -1099,8 +1103,7 @@ function acceptFriendRequest(userId) {
 
 function declineFriendRequest(userId) {
   friendRequests = friendRequests.filter(f => f.userId !== userId);
-  localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
-  updateRequestCount();
+   updateRequestCount();
   closeFriendRequestsModal();
   showNotification('Friend request declined.', 'error');
 }
