@@ -415,6 +415,7 @@ function joinStudyRoom(roomId, skipPasswordCheck = false) {
     
     // Store current room
     sessionStorage.setItem('currentRoom', JSON.stringify(room));
+    sessionStorage.setItem('studySessionStartMs', String(Date.now()));
     window.location.href = 'study-room-interface.html';
 }
 
@@ -1659,220 +1660,293 @@ const WEEKLY_MISSIONS_TEMPLATE = [
 
 function loadMissions(type) {
     const key = type === 'daily' ? 'dailyMissionsState' : 'weeklyMissionsState';
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw);
     const template = type === 'daily' ? DAILY_MISSIONS_TEMPLATE : WEEKLY_MISSIONS_TEMPLATE;
-    const initial = template.map(m => ({
-        id: m.id,
-        title: m.title,
-        targetSeconds: m.targetSeconds || 0,
-        points: m.points || 0,
-        progressSeconds: 0,
-               claimed: false
-    }));
-    localStorage.setItem(key, JSON.stringify(initial));
-    return initial;
-}
 
+    let saved = [];
+    try { saved = JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) { saved = []; }
+
+    const savedMap = {};
+    saved.forEach(s => { if (s && s.id) savedMap[s.id] = s; });
+
+    const merged = template.map(m => {
+        const s = savedMap[m.id];
+        return {
+            id: m.id,
+            title: m.title,
+            targetSeconds: m.targetSeconds || 0,
+            points: m.points || 0,
+            progressSeconds: s ? (s.progressSeconds || 0) : 0,
+            claimed: s ? !!s.claimed : false
+        };
+    });
+
+    // keep any custom missions
+    saved.forEach(s => {
+        if (!merged.find(m => m.id === s.id)) merged.push(s);
+    });
+
+    localStorage.setItem(key, JSON.stringify(merged));
+    return merged;
+}
 function saveMissions(type, data) {
-    const key = type === 'daily' ? 'dailyMissionsState' : 'weeklyMissionsState';
-    localStorage.setItem(key, JSON.stringify(data));
+    localStorage.setItem(type === 'daily' ? 'dailyMissionsState' : 'weeklyMissionsState', JSON.stringify(data));
 }
-
 window.getDailyMissions = () => loadMissions('daily');
 window.getWeeklyMissions = () => loadMissions('weekly');
 
-/**
- * Add study seconds to mission progress (called on leaving room).
- * secondsToAdd: integer seconds to add.
- */
-function updateMissionProgress(secondsToAdd) {
-    secondsToAdd = Math.max(0, Math.floor(Number(secondsToAdd) || 0));
+// --- HK time helpers (add if not present) ---
+function hkNow() {
+  const now = new Date();
+  return new Date(now.getTime() + (now.getTimezoneOffset() * -1 + 480) * 60000); // UTC+8
+}
+function hkDateKey(d = hkNow()) {
+  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+}
 
-    // DAILY
+// --- Daily/Weekly reset (call once on home page load) ---
+function resetDailyIfNeeded() {
+  const last = localStorage.getItem('dailyResetHKDate');
+  const today = hkDateKey();
+  if (last !== today) {
     const daily = loadMissions('daily');
-    let changed = false;
-    daily.forEach(m => {
-        if (m.targetSeconds > 0) {
-            m.progressSeconds = Math.min(m.targetSeconds, (m.progressSeconds || 0) + secondsToAdd);
-            if (m.progressSeconds > (m.targetSeconds || 0)) m.progressSeconds = m.targetSeconds;
-            changed = true;
-        }
-    });
-    if (changed) saveMissions('daily', daily);
-
-    // WEEKLY
-    const weekly = loadMissions('weekly');
-    changed = false;
-    weekly.forEach(m => {
-        if (m.targetSeconds > 0) {
-            m.progressSeconds = Math.min(m.targetSeconds, (m.progressSeconds || 0) + secondsToAdd);
-            if (m.progressSeconds > (m.targetSeconds || 0)) m.progressSeconds = m.targetSeconds;
-            changed = true;
-        }
-    });
-    if (changed) saveMissions('weekly', weekly);
-
-    // Re-render UI if present
-    try { renderMissionsUI(); } catch (e) {}
-}
-window.updateMissionProgress = updateMissionProgress;
-
-/**
- * Claim mission by id and type ('daily'|'weekly').
- */
-function claimMission(type, missionId) {
-    const list = loadMissions(type);
-    const m = list.find(x => x.id === missionId);
-    if (!m) return;
-    const alreadyClaimed = m.claimed;
-    const achieved = (m.targetSeconds === 0) ? true : (m.progressSeconds >= m.targetSeconds);
-    if (!achieved || alreadyClaimed) return;
-    m.claimed = true;
-    saveMissions(type, list);
-
-    // Reward points
-    currentUser.studyPoints = (currentUser.studyPoints || 0) + (m.points || 0);
-    localStorage.setItem('userStudyPoints', String(currentUser.studyPoints));
-    try { updateUserInfo(); } catch (e) {} // update UI if function exists
-
-    // update home UI
-    try { renderMissionsUI(); } catch (e) {}
-}
-window.claimMission = claimMission;
-
-/**
- * Render mission panels in home.html. Expects specific containers to exist:
- * - #dailyMissionsContainer
- * - #weeklyMissionsContainer
- */
-function renderMissionsUI() {
-    const dailyList = loadMissions('daily');
-    const weeklyList = loadMissions('weekly');
-
-    const dailyContainer = document.getElementById('dailyMissionsContainer');
-    const weeklyContainer = document.getElementById('weeklyMissionsContainer');
-
-    if (dailyContainer) {
-        dailyContainer.innerHTML = dailyList.map(m => {
-            const percent = m.targetSeconds > 0 ? Math.round((m.progressSeconds||0) / m.targetSeconds * 100) : (m.claimed ? 100 : 0);
-            const progressText = m.targetSeconds > 0
-                ? `${formatStudyDurationHMS(m.progressSeconds || 0)} / ${formatStudyDurationHMS(m.targetSeconds)} (${percent}%)`
-                : (m.claimed ? 'Completed' : 'Not started');
-            const btnDisabled = (!m.targetSeconds && !m.claimed) ? false : !( (m.targetSeconds === 0) || ((m.progressSeconds||0) >= m.targetSeconds) ) ;
-            const btnClass = m.claimed ? 'get-btn claimed' : 'get-btn';
-            const btnDisabledAttr = m.claimed ? 'disabled' : (btnDisabled ? 'disabled' : '');
-            return `
-<div class="mission-item ${m.claimed ? 'completed' : ''}">
-  <div class="mission-content">
-    <div class="mission-text-row">
-      <span class="mission-text">${m.title}</span>
-      <span class="mission-points">+${m.points} pts</span>
-    </div>
-    ${m.targetSeconds > 0 ? `
-    <div class="progress-bar-container">
-      <div class="progress-bar-wrapper">
-        <div class="progress-bar-completed" style="width:${percent}%"></div>
-        <div class="progress-bar-remaining" style="width:${100-percent}%"></div>
-      </div>
-      <span class="progress-text">${progressText}</span>
-    </div>` : `<div class="progress-text">${progressText}</div>`}
-    <div class="mission-actions">
-      <button class="${btnClass}" onclick="claimMission('daily','${m.id}')" ${btnDisabledAttr}>${m.claimed ? 'Got' : 'Get'}</button>
-    </div>
-  </div>
-</div>`;
-        }).join('');
-    }
-
-    if (weeklyContainer) {
-        weeklyContainer.innerHTML = weeklyList.map(m => {
-            const percent = m.targetSeconds > 0 ? Math.round((m.progressSeconds||0) / m.targetSeconds * 100) : (m.claimed ? 100 : 0);
-            const progressText = m.targetSeconds > 0
-                ? `${formatStudyDurationHMS(m.progressSeconds || 0)} / ${formatStudyDurationHMS(m.targetSeconds)} (${percent}%)`
-                : (m.claimed ? 'Completed' : 'Not started');
-            const btnDisabled = (!m.targetSeconds && !m.claimed) ? false : !( (m.targetSeconds === 0) || ((m.progressSeconds||0) >= m.targetSeconds) ) ;
-            const btnClass = m.claimed ? 'get-btn claimed' : 'get-btn';
-            const btnDisabledAttr = m.claimed ? 'disabled' : (btnDisabled ? 'disabled' : '');
-            return `
-<div class="mission-item ${m.claimed ? 'completed' : ''}">
-  <div class="mission-content">
-    <div class="mission-text-row">
-      <span class="mission-text">${m.title}</span>
-      <span class="mission-points">+${m.points} pts</span>
-    </div>
-    ${m.targetSeconds > 0 ? `
-    <div class="progress-bar-container">
-      <div class="progress-bar-wrapper">
-        <div class="progress-bar-completed" style="width:${percent}%"></div>
-        <div class="progress-bar-remaining" style="width:${100-percent}%"></div>
-      </div>
-      <span class="progress-text">${progressText}</span>
-    </div>` : `<div class="progress-text">${progressText}</div>`}
-    <div class="mission-actions">
-      <button class="${btnClass}" onclick="claimMission('weekly','${m.id}')" ${btnDisabledAttr}>${m.claimed ? 'Got' : 'Get'}</button>
-    </div>
-  </div>
-</div>`;
-        }).join('');
-    }
-
-    // Update study points display if present
-    const ptsEl = document.getElementById('studyPoints');
-    if (ptsEl) ptsEl.textContent = (currentUser.studyPoints || 0).toLocaleString();
-}
-window.renderMissionsUI = renderMissionsUI;
-
-/** Reset helpers using HK timezone (UTC+8) */
-function getHKNow() {
-    const now = new Date();
-    const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
-    return new Date(utcMs + (8 * 3600000));
-}
-function scheduleNextDailyReset() {
-    const hkNow = getHKNow();
-    const nextMidnightHK = new Date(hkNow.getFullYear(), hkNow.getMonth(), hkNow.getDate() + 1, 0, 0, 0);
-    const nextUtcMs = nextMidnightHK.getTime() - (8 * 3600000);
-    const delay = Math.max(0, nextUtcMs - Date.now());
-    setTimeout(() => { resetDailyMissions(); scheduleNextDailyReset(); }, delay);
-}
-function scheduleNextWeeklyReset() {
-    const hkNow = getHKNow();
-    const day = hkNow.getDay(); // 0 Sun ... 1 Mon
-    const daysToAdd = (8 - day) % 7 || 7; // next Monday
-    const nextMondayHK = new Date(hkNow.getFullYear(), hkNow.getMonth(), hkNow.getDate() + daysToAdd, 0, 0, 0);
-    const nextUtcMs = nextMondayHK.getTime() - (8 * 3600000);
-    const delay = Math.max(0, nextUtcMs - Date.now());
-    setTimeout(() => { resetWeeklyMissions(); scheduleNextWeeklyReset(); }, delay);
-}
-
-function resetDailyMissions() {
-    const daily = loadMissions('daily');
-    daily.forEach(m => {
-        m.progressSeconds = 0;
-        m.claimed = false;
-    });
+    daily.forEach(m => { m.progressSeconds = 0; m.claimed = false; });
     saveMissions('daily', daily);
-    try { renderMissionsUI(); } catch (e) {}
+    localStorage.setItem('dailyResetHKDate', today);
+  }
 }
-function resetWeeklyMissions() {
+function resetWeeklyIfNeeded() {
+  const last = localStorage.getItem('weeklyResetHKWeek');
+  const now = hkNow();
+  const weekKey = (() => {
+    const monday = new Date(now);
+    const day = (monday.getDay() + 6) % 7; // Mon=0
+    monday.setDate(monday.getDate() - day);
+    return hkDateKey(monday);
+  })();
+  if (last !== weekKey) {
     const weekly = loadMissions('weekly');
-    weekly.forEach(m => {
-        m.progressSeconds = 0;
-        m.claimed = false;
-    });
+    weekly.forEach(m => { m.progressSeconds = 0; m.claimed = false; });
     saveMissions('weekly', weekly);
-    try { renderMissionsUI(); } catch (e) {}
+    localStorage.setItem('weeklyResetHKWeek', weekKey);
+  }
 }
-
 function initMissionsAndSchedules() {
-    loadMissions('daily');
-    loadMissions('weekly');
-    try { renderMissionsUI(); } catch (e) {}
-    scheduleNextDailyReset();
-    scheduleNextWeeklyReset();
+  // ensure templates merged
+  loadMissions('daily');
+  loadMissions('weekly');
+  resetDailyIfNeeded();
+  resetWeeklyIfNeeded();
+  renderMissionsUI();
 }
 window.initMissionsAndSchedules = initMissionsAndSchedules;
 
-// Initialize on load
-try { initMissionsAndSchedules(); } catch (e) {}
+// --- Friend presence (simple) ---
+function hadFriendInSession() {
+  if (typeof window.userJoinedWithFriends !== 'undefined') return !!window.userJoinedWithFriends;
+  try {
+    const raw = sessionStorage.getItem('currentRoom');
+    if (!raw) return false;
+    const room = JSON.parse(raw);
+    const friendNames = (friends || []).map(f => f.username);
+    const parts = room.participantsList || room.participants;
+    if (Array.isArray(parts)) {
+      return parts.some(p => {
+        const name = typeof p === 'string' ? p : (p?.username || '');
+        return friendNames.includes(name);
+      });
+    }
+    return false;
+  } catch (_) { return false; }
+}
+
+// --- Accumulation on leave ---
+function updateMissionProgress(secondsToAdd) {
+  secondsToAdd = Math.max(0, Math.floor(Number(secondsToAdd) || 0));
+  const friendFlag = hadFriendInSession();
+
+  // Daily
+  const daily = loadMissions('daily');
+  let changedDaily = false;
+  daily.forEach(m => {
+    if (m.id === 'daily_enter_room_60m') {
+      m.progressSeconds = Math.min(m.targetSeconds, (m.progressSeconds || 0) + secondsToAdd);
+      changedDaily = true;
+    } else if (m.id === 'daily_stay_15m_with_friends' && friendFlag) {
+      m.progressSeconds = Math.min(m.targetSeconds, (m.progressSeconds || 0) + secondsToAdd);
+      changedDaily = true;
+    }
+  });
+  if (changedDaily) saveMissions('daily', daily);
+
+  // Weekly (only 7h goal accumulates time)
+  const weekly = loadMissions('weekly');
+  let changedWeekly = false;
+  weekly.forEach(m => {
+    if (m.id === 'weekly_7h_goal') {
+      m.progressSeconds = Math.min(m.targetSeconds, (m.progressSeconds || 0) + secondsToAdd);
+      changedWeekly = true;
+    }
+  });
+  if (changedWeekly) saveMissions('weekly', weekly);
+
+  renderMissionsUI();
+}
+window.updateMissionProgress = updateMissionProgress;
+
+// --- Leave room wrapper (accumulate before redirect) ---
+(function wrapLeave() {
+  const original = window.leaveStudyRoom;
+  window.leaveStudyRoom = function() {
+    if (!confirm('Are you sure you want to leave this study room?')) return;
+    let secs = Math.max(0, Math.floor(Number(window.currentStudyTimeSeconds || 0)));
+    if (!secs) {
+      const start = parseInt(sessionStorage.getItem('studySessionStartMs') || '0', 10);
+      if (start) secs = Math.floor((Date.now() - start) / 1000);
+    }
+    try {
+      updateUserStudyTotals && updateUserStudyTotals(secs);
+      updateMissionProgress(secs);
+    } catch (e) { console.error(e); }
+    if (original && original !== window.leaveStudyRoom) {
+      try { return original(); } catch(e){}
+    }
+    sessionStorage.removeItem('currentRoom');
+    window.location.href = 'study-room.html';
+  };
+})();
+
+// --- Render UI (daily_login always claimable until claimed) ---
+function renderMissionsUI() {
+  const daily = loadMissions('daily');
+  const weekly = loadMissions('weekly');
+  const dCont = document.getElementById('dailyMissionsContainer');
+  const wCont = document.getElementById('weeklyMissionsContainer');
+
+  if (dCont) {
+    dCont.innerHTML = daily.map(m => {
+      const percent = m.targetSeconds > 0 ? Math.round((m.progressSeconds || 0) / m.targetSeconds * 100) : (m.claimed ? 100 : 0);
+      const progressText = m.targetSeconds > 0
+        ? `${m.progressSeconds}s / ${m.targetSeconds}s (${percent}%)`
+        : (m.claimed ? 'Claimed' : 'Ready');
+      const canClaim = !m.claimed && (
+        m.id === 'daily_login' ||
+        (m.targetSeconds === 0) ||
+        (m.progressSeconds >= m.targetSeconds)
+      );
+      return `<div class="mission-item ${m.claimed?'completed':''}">
+        <div class="mission-content">
+          <div class="mission-text-row">
+            <span class="mission-text">${m.title}</span>
+            <span class="mission-points">+${m.points} pts</span>
+          </div>
+          ${m.targetSeconds>0?`<div class="progress-bar-container">
+            <div class="progress-bar-wrapper">
+              <div class="progress-bar-completed" style="width:${percent}%"></div>
+              <div class="progress-bar-remaining" style="width:${100-percent}%"></div>
+            </div>
+            <span class="progress-text">${progressText}</span>
+          </div>`:`<div class="progress-text">${progressText}</div>`}
+          <div class="mission-actions">
+            <button class="get-btn ${m.claimed?'claimed':(canClaim?'available':'disabled')}"
+              onclick="claimMission('daily','${m.id}')" ${canClaim?'': 'disabled'}>${m.claimed? 'Got':'Get'}</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  if (wCont) {
+    wCont.innerHTML = weekly.map(m => {
+      const percent = m.targetSeconds > 0 ? Math.round((m.progressSeconds || 0) / m.targetSeconds * 100) : (m.claimed ? 100 : 0);
+      const progressText = m.targetSeconds > 0
+        ? `${m.progressSeconds}s / ${m.targetSeconds}s (${percent}%)`
+        : (m.claimed ? 'Claimed' : 'Ready');
+      let canClaim = false;
+      if (!m.claimed) {
+        if (m.targetSeconds === 0 && (m.id !== 'weekly_top100' && m.id !== 'weekly_top3_friends')) canClaim = true;
+        else if (m.id === 'weekly_7h_goal' && m.progressSeconds >= m.targetSeconds) canClaim = true;
+        else if (m.id === 'weekly_top100' && isOnGlobalTop100ThisWeek && isOnGlobalTop100ThisWeek()) canClaim = true;
+        else if (m.id === 'weekly_top3_friends') {
+          const r = getFriendRankThisWeek && getFriendRankThisWeek();
+          if (r && r <= 3) canClaim = true;
+        }
+      }
+      return `<div class="mission-item ${m.claimed?'completed':''}">
+        <div class="mission-content">
+          <div class="mission-text-row">
+            <span class="mission-text">${m.title}</span>
+            <span class="mission-points">+${m.points} pts</span>
+          </div>
+          ${m.targetSeconds>0?`<div class="progress-bar-container">
+            <div class="progress-bar-wrapper">
+              <div class="progress-bar-completed" style="width:${percent}%"></div>
+              <div class="progress-bar-remaining" style="width:${100-percent}%"></div>
+            </div>
+            <span class="progress-text">${progressText}</span>
+          </div>`:`<div class="progress-text">${progressText}</div>`}
+          <div class="mission-actions">
+            <button class="get-btn ${m.claimed?'claimed':(canClaim?'available':'disabled')}"
+              onclick="claimMission('weekly','${m.id}')" ${canClaim?'':'disabled'}>${m.claimed? 'Got':'Get'}</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+window.renderMissionsUI = renderMissionsUI;
+
+// --- Claim logic (daily_login immediate) ---
+function claimMission(type, missionId) {
+  const list = loadMissions(type);
+  const m = list.find(x => x.id === missionId);
+  if (!m || m.claimed) return;
+  const achieved = m.id === 'daily_login'
+    ? true
+    : (m.targetSeconds === 0 ? true : m.progressSeconds >= m.targetSeconds);
+
+  if (type === 'weekly') {
+    if (missionId === 'weekly_top100' && !(isOnGlobalTop100ThisWeek && isOnGlobalTop100ThisWeek())) return;
+    if (missionId === 'weekly_top3_friends') {
+      const r = getFriendRankThisWeek && getFriendRankThisWeek();
+      if (!r || r > 3) return;
+    }
+  }
+  if (!achieved) return;
+
+  m.claimed = true;
+  saveMissions(type, list);
+  currentUser.studyPoints = (currentUser.studyPoints || 0) + (m.points || 0);
+  localStorage.setItem('userStudyPoints', String(currentUser.studyPoints));
+  try { updateUserInfo && updateUserInfo(); } catch(_) {}
+  renderMissionsUI();
+}
+window.claimMission = claimMission;
+
+/* --- Weekly leaderboard gating helpers (ensure buttons enable only when eligible) --- */
+function isOnGlobalTop100ThisWeek() {
+    const board = document.getElementById('globalLeaderboard');
+    if (!board) return false;
+    const uname = localStorage.getItem('currentUsername') || currentUser.username;
+    return Array.from(board.querySelectorAll('.leaderboard-username'))
+        .slice(0, 100)
+        .some(el => (el.textContent || '').replace('(You)','').trim() === uname);
+}
+function getFriendRankThisWeek() {
+    const board = document.getElementById('friendsLeaderboard');
+    if (!board) return null;
+    const uname = localStorage.getItem('currentUsername') || currentUser.username;
+    const items = Array.from(board.querySelectorAll('.leaderboard-item'));
+    for (const item of items) {
+        const nameEl = item.querySelector('.leaderboard-username');
+        const rankEl = item.querySelector('.rank');
+        if (!nameEl || !rankEl) continue;
+        const name = (nameEl.textContent || '').replace('(You)','').trim();
+        if (name === uname) {
+            const m = (rankEl.textContent || '').match(/#(\d+)/);
+            if (m) return parseInt(m[1],10);
+        }
+    }
+    return null;
+}
+window.isOnGlobalTop100ThisWeek = isOnGlobalTop100ThisWeek;
+window.getFriendRankThisWeek = getFriendRankThisWeek;
