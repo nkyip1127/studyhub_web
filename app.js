@@ -2033,6 +2033,8 @@ function initMissionsAndSchedules() {
   resetDailyIfNeeded();
   resetWeeklyIfNeeded();
   renderMissionsUI();
+  
+
 }
 window.initMissionsAndSchedules = initMissionsAndSchedules;
 
@@ -2064,14 +2066,28 @@ function updateMissionProgress(secondsToAdd) {
   const daily = loadMissions('daily');
   let changedDaily = false;
   daily.forEach(m => {
-    if (m.id === 'daily_enter_room_60m') {
-      m.progressSeconds = Math.min(m.targetSeconds, (m.progressSeconds || 0) + secondsToAdd);
-      changedDaily = true;
-    } else if (m.id === 'daily_stay_15m_with_friends' && friendFlag) {
-      m.progressSeconds = Math.min(m.targetSeconds, (m.progressSeconds || 0) + secondsToAdd);
-      changedDaily = true;
+  if (m.id === 'daily_enter_room_60m') {
+    const oldProgress = m.progressSeconds || 0;
+    m.progressSeconds = Math.min(m.targetSeconds, oldProgress + secondsToAdd);
+    changedDaily = true;
+    
+    // AUTO-COMPLETE & REPEAT: Award points when reaching 10 seconds
+    if (m.progressSeconds >= m.targetSeconds && oldProgress < m.targetSeconds) {
+      currentUser.studyPoints = (currentUser.studyPoints || 0) + (m.points || 0);
+      const prefix = isSignUpMode ? signUpPrefix : '';
+      localStorage.setItem(prefix + 'userStudyPoints', String(currentUser.studyPoints));
+      showNotification('Mission completed! You earned ${m.points} points!', 'success');
+      try { updateUserInfo(); } catch(e) {}
+      
+      // RESET for next completion (repeatable)
+      m.progressSeconds = 0;
+      m.claimed = false;
     }
-  });
+  } else if (m.id === 'daily_stay_15m_with_friends' && friendFlag) {
+    m.progressSeconds = Math.min(m.targetSeconds, (m.progressSeconds || 0) + secondsToAdd);
+    changedDaily = true;
+  }
+});
   if (changedDaily) saveMissions('daily', daily);
 
   // Weekly (only 7h goal accumulates time)
@@ -2273,7 +2289,7 @@ function renderMissionsUI() {
           </div>`:`<div class="progress-text">${progressText}</div>`}
           <div class="mission-actions">
             <button class="get-btn ${m.claimed?'claimed':(canClaim?'available':'disabled')}"
-              onclick="claimMission('weekly','${m.id}')" ${canClaim?'':'disabled'}>${m.claimed? 'Got':'Get'}</button>
+              onclick="claimMission('weekly','${m.id}')" ${canClaim?'':'disabled'}>${m.claimed? 'Collected':'Obtain'}</button>
           </div>
         </div>
       </div>`;
@@ -2348,6 +2364,7 @@ function claimMission(type, missionId) {
   localStorage.setItem(prefix + 'userStudyPoints', String(currentUser.studyPoints));
   try { updateUserInfo && updateUserInfo(); } catch(_) {}
   renderMissionsUI();
+
 }
 window.claimMission = claimMission;
 
