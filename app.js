@@ -17,7 +17,7 @@ let currentUser = {
 };
 
 // Study room time (adjustable in app.js for demonstration)
-let currentStudyRoomTime = 0; // in minutes, default 0
+let currentStudyRoomTime = 49.8; // in minutes, default 0
 
 let studyRooms = [];
 let resources = [];
@@ -56,14 +56,26 @@ if (isSignUpMode) {
 
 // Initialize mock data
 function initMockData() {
-    // Load uploaded resources from localStorage
-    const savedResources = localStorage.getItem('uploadedResources');
+    // Load uploaded resources from localStorage (check prefix for sign up mode)
+    const prefix = isSignUpMode ? signUpPrefix : '';
+    const savedResources = localStorage.getItem(prefix + 'uploadedResources');
     let uploadedResources = [];
     if (savedResources) {
         try {
             uploadedResources = JSON.parse(savedResources);
         } catch (e) {
             console.error('Error loading uploaded resources:', e);
+        }
+    }
+    // Also check shared location for backward compatibility (login mode)
+    if (!isSignUpMode && uploadedResources.length === 0) {
+        const sharedResources = localStorage.getItem('uploadedResources');
+        if (sharedResources) {
+            try {
+                uploadedResources = JSON.parse(sharedResources);
+            } catch (e) {
+                console.error('Error loading shared uploaded resources:', e);
+            }
         }
     }
     
@@ -628,7 +640,7 @@ function submitUpload() {
     
     // Create a resource for each uploaded file
     const newResources = [];
-    const savedResources = localStorage.getItem('uploadedResources');
+    const savedResources = localStorage.getItem(prefix + 'uploadedResources');
     let uploadedResources = [];
     if (savedResources) {
         try {
@@ -658,8 +670,18 @@ function submitUpload() {
     resources.push(newResource);
     uploadedResources.push(newResource);
     
-    // Save uploaded resources to localStorage for persistence
-    localStorage.setItem('uploadedResources', JSON.stringify(uploadedResources));
+    // Save uploaded resources to localStorage for persistence (with prefix for sign up mode)
+    localStorage.setItem(prefix + 'uploadedResources', JSON.stringify(uploadedResources));
+    
+    // Also save to shared location for backward compatibility (login mode)
+    if (!isSignUpMode) {
+        localStorage.setItem('uploadedResources', JSON.stringify(uploadedResources));
+    }
+    
+    // Update mission progress for upload resources mission
+    if (typeof renderMissionsUI === 'function') {
+        renderMissionsUI();
+    }
     
     closeUploadModal();
     
@@ -1250,47 +1272,6 @@ function renderFriendRequestsModal() {
     `;
   }
   modal.style.display = 'block';
-}
-
-function showFriendRequests() {
-  const requestsModal = document.createElement('div');
-  requestsModal.className = 'modal';
-  requestsModal.id = 'friendRequestsModal';
-  let html = `
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Pending Friend Requests</h2>
-        <button class="close-btn" onclick="closeFriendRequestsModal()">&times;</button>
-      </div>
-      <div style="padding: 20px;">
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-  `;
-  if (friendRequests.length === 0) {
-    html += `<div>No pending requests right now.</div>`;
-  } else {
-    friendRequests.forEach(req => {
-      html += `
-        <div class="friend-card" style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <div style="font-weight: 500;">${req.username}</div>
-            <div style="font-size: 12px; color: #666;">User ID: ${req.userId}</div>
-          </div>
-          <div>
-            <button class="submit-btn" style="background-color: #4caf50;" onclick="acceptFriendRequest('${req.userId}')">Accept</button>
-            <button class="submit-btn" style="background-color: #f44336;" onclick="declineFriendRequest('${req.userId}')">Decline</button>
-          </div>
-        </div>
-      `;
-    });
-  }
-  html += `
-        </div>
-      </div>
-    </div>
-  `;
-  requestsModal.innerHTML = html;
-  document.body.appendChild(requestsModal);
-  requestsModal.style.display = 'block';
 }
 
 function closeFriendRequestsModal() {
@@ -1970,8 +1951,9 @@ function loadMissions(type) {
         let progressSeconds = s ? (s.progressSeconds || 0) : 0;
         let claimed = s ? !!s.claimed : false;
         
-        // For sign up mode, reset all missions except daily_login
-        if (isSignUpMode && m.id !== 'daily_login') {
+        // For sign up mode, only reset on first load (if no saved data exists)
+        // Don't reset if there's already saved progress
+        if (isSignUpMode && m.id !== 'daily_login' && !s) {
             progressSeconds = 0;
             claimed = false;
         }
@@ -2197,7 +2179,8 @@ function renderMissionsUI() {
       
       // For weekly_upload_resources, show progress
       if (m.id === 'weekly_upload_resources' && !m.claimed) {
-        const savedResources = localStorage.getItem('uploadedResources');
+        const prefix = isSignUpMode ? signUpPrefix : '';
+        const savedResources = localStorage.getItem(prefix + 'uploadedResources');
         let uploadedResources = [];
         if (savedResources) {
           try {
@@ -2206,8 +2189,19 @@ function renderMissionsUI() {
             uploadedResources = [];
           }
         }
+        // Also check the shared uploadedResources for backward compatibility
+        if (!isSignUpMode && uploadedResources.length === 0) {
+          const sharedResources = localStorage.getItem('uploadedResources');
+          if (sharedResources) {
+            try {
+              uploadedResources = JSON.parse(sharedResources);
+            } catch (e) {
+              uploadedResources = [];
+            }
+          }
+        }
         const targetCount = 3;
-        const currentCount = isSignUpMode ? 0 : uploadedResources.length;
+        const currentCount = uploadedResources.length;
         percent = Math.min(100, Math.round((currentCount / targetCount) * 100));
         progressText = `${currentCount} / ${targetCount} resources uploaded`;
         // Set progressSeconds for display purposes (not used for claiming)
@@ -2219,7 +2213,8 @@ function renderMissionsUI() {
       if (!m.claimed) {
         if (m.id === 'weekly_upload_resources') {
           // Check uploaded resources count
-          const savedResources = localStorage.getItem('uploadedResources');
+          const prefix = isSignUpMode ? signUpPrefix : '';
+          const savedResources = localStorage.getItem(prefix + 'uploadedResources');
           let uploadedResources = [];
           if (savedResources) {
             try {
@@ -2228,9 +2223,19 @@ function renderMissionsUI() {
               uploadedResources = [];
             }
           }
-          // For sign up mode, always incomplete (0 resources)
-          // For login mode, check if >= 3 resources uploaded
-          if (!isSignUpMode && uploadedResources.length >= 3) {
+          // Also check the shared uploadedResources for backward compatibility (login mode)
+          if (!isSignUpMode && uploadedResources.length === 0) {
+            const sharedResources = localStorage.getItem('uploadedResources');
+            if (sharedResources) {
+              try {
+                uploadedResources = JSON.parse(sharedResources);
+              } catch (e) {
+                uploadedResources = [];
+              }
+            }
+          }
+          // Check if >= 3 resources uploaded (works for both modes)
+          if (uploadedResources.length >= 3) {
             canClaim = true;
           }
         }
@@ -2287,7 +2292,8 @@ function claimMission(type, missionId) {
     achieved = true;
   } else if (m.id === 'weekly_upload_resources') {
     // Check uploaded resources count
-    const savedResources = localStorage.getItem('uploadedResources');
+    const prefix = isSignUpMode ? signUpPrefix : '';
+    const savedResources = localStorage.getItem(prefix + 'uploadedResources');
     let uploadedResources = [];
     if (savedResources) {
       try {
@@ -2296,9 +2302,19 @@ function claimMission(type, missionId) {
         uploadedResources = [];
       }
     }
-    // For sign up mode, always false (0 resources)
-    // For login mode, check if >= 3 resources uploaded
-    achieved = !isSignUpMode && uploadedResources.length >= 3;
+    // Also check the shared uploadedResources for backward compatibility (login mode)
+    if (!isSignUpMode && uploadedResources.length === 0) {
+      const sharedResources = localStorage.getItem('uploadedResources');
+      if (sharedResources) {
+        try {
+          uploadedResources = JSON.parse(sharedResources);
+        } catch (e) {
+          uploadedResources = [];
+        }
+      }
+    }
+    // Check if >= 3 resources uploaded (works for both modes)
+    achieved = uploadedResources.length >= 3;
   } else if (m.targetSeconds === 0) {
     achieved = true;
   } else if (m.id === 'weekly_7h_goal') {
