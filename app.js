@@ -1826,7 +1826,7 @@ function renderMissionsUI() {
     dCont.innerHTML = daily.map(m => {
       const percent = m.targetSeconds > 0 ? Math.round((m.progressSeconds || 0) / m.targetSeconds * 100) : (m.claimed ? 100 : 0);
       const progressText = m.targetSeconds > 0
-        ? `${m.progressSeconds}s / ${m.targetSeconds}s (${percent}%)`
+        ? `${formatStudyDurationHMS(m.progressSeconds || 0)} / ${formatStudyDurationHMS(m.targetSeconds)} (${percent}%)`
         : (m.claimed ? 'Claimed' : 'Ready');
       const canClaim = !m.claimed && (
         m.id === 'daily_login' ||
@@ -1859,7 +1859,7 @@ function renderMissionsUI() {
     wCont.innerHTML = weekly.map(m => {
       const percent = m.targetSeconds > 0 ? Math.round((m.progressSeconds || 0) / m.targetSeconds * 100) : (m.claimed ? 100 : 0);
       const progressText = m.targetSeconds > 0
-        ? `${m.progressSeconds}s / ${m.targetSeconds}s (${percent}%)`
+        ? `${formatStudyDurationHMS(m.progressSeconds || 0)} / ${formatStudyDurationHMS(m.targetSeconds)} (${percent}%)`
         : (m.claimed ? 'Claimed' : 'Ready');
       let canClaim = false;
       if (!m.claimed) {
@@ -1950,3 +1950,30 @@ function getFriendRankThisWeek() {
 }
 window.isOnGlobalTop100ThisWeek = isOnGlobalTop100ThisWeek;
 window.getFriendRankThisWeek = getFriendRankThisWeek;
+
+// Single, guarded Leave handler (no nested call to previous handler)
+let __leaveRoomProcessing = false;
+function singleLeaveStudyRoom() {
+  if (__leaveRoomProcessing) return;
+  if (!confirm('Are you sure you want to leave this study room?')) return;
+  __leaveRoomProcessing = true;
+
+  let secondsToAdd = Math.max(0, Math.floor(Number(window.currentStudyTimeSeconds || 0)));
+  if (!secondsToAdd) {
+    const start = parseInt(sessionStorage.getItem('studySessionStartMs') || '0', 10);
+    if (start) secondsToAdd = Math.floor((Date.now() - start) / 1000);
+  }
+
+  try { if (typeof updateUserStudyTotals === 'function') updateUserStudyTotals(secondsToAdd); } catch(_) {}
+  try { if (typeof updateMissionProgress === 'function') updateMissionProgress(secondsToAdd); } catch(_) {}
+
+  if (window.studyRoomTimeInterval) { clearInterval(window.studyRoomTimeInterval); window.studyRoomTimeInterval = null; }
+  if (typeof __sr_alertTimer !== 'undefined' && __sr_alertTimer) { clearTimeout(__sr_alertTimer); __sr_alertTimer = null; }
+  if (typeof __sr_countdownInterval !== 'undefined' && __sr_countdownInterval) { clearInterval(__sr_countdownInterval); __sr_countdownInterval = null; }
+
+  sessionStorage.removeItem('currentRoom');
+  window.location.href = 'study-room.html';
+
+  setTimeout(() => { __leaveRoomProcessing = false; }, 500);
+}
+window.leaveStudyRoom = singleLeaveStudyRoom;
