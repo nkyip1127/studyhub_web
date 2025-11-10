@@ -2144,7 +2144,7 @@ function renderMissionsUI() {
           </div>`:`<div class="progress-text">${progressText}</div>`}
           <div class="mission-actions">
             <button class="get-btn ${m.claimed?'claimed':(canClaim?'available':'disabled')}"
-              onclick="claimMission('daily','${m.id}')" ${canClaim?'': 'disabled'}>${m.claimed? 'Got':'Get'}</button>
+              onclick="claimMission('daily','${m.id}')" ${canClaim?'': 'disabled'}>${m.claimed? 'Collected':'Obtain'}</button>
           </div>
         </div>
       </div>`;
