@@ -1664,7 +1664,7 @@ function loadMissions(type) {
     const template = type === 'daily' ? DAILY_MISSIONS_TEMPLATE : WEEKLY_MISSIONS_TEMPLATE;
     const initial = template.map(m => ({
         id: m.id,
-        title: mtitle,
+        title: m.title,
         targetSeconds: m.targetSeconds || 0,
         points: m.points || 0,
         progressSeconds: 0,
