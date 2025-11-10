@@ -17,7 +17,7 @@ let currentUser = {
 };
 
 // Study room time (adjustable in app.js for demonstration)
-let currentStudyRoomTime = 49.5; // in minutes, default 0
+let currentStudyRoomTime = 0; // in minutes, default 0
 
 let studyRooms = [];
 let resources = [];
