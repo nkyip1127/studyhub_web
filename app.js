@@ -1252,6 +1252,47 @@ function renderFriendRequestsModal() {
   modal.style.display = 'block';
 }
 
+function showFriendRequests() {
+  const requestsModal = document.createElement('div');
+  requestsModal.className = 'modal';
+  requestsModal.id = 'friendRequestsModal';
+  let html = `
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Pending Friend Requests</h2>
+        <button class="close-btn" onclick="closeFriendRequestsModal()">&times;</button>
+      </div>
+      <div style="padding: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+  `;
+  if (friendRequests.length === 0) {
+    html += `<div>No pending requests right now.</div>`;
+  } else {
+    friendRequests.forEach(req => {
+      html += `
+        <div class="friend-card" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 500;">${req.username}</div>
+            <div style="font-size: 12px; color: #666;">User ID: ${req.userId}</div>
+          </div>
+          <div>
+            <button class="submit-btn" style="background-color: #4caf50;" onclick="acceptFriendRequest('${req.userId}')">Accept</button>
+            <button class="submit-btn" style="background-color: #f44336;" onclick="declineFriendRequest('${req.userId}')">Decline</button>
+          </div>
+        </div>
+      `;
+    });
+  }
+  html += `
+        </div>
+      </div>
+    </div>
+  `;
+  requestsModal.innerHTML = html;
+  document.body.appendChild(requestsModal);
+  requestsModal.style.display = 'block';
+}
+
 function closeFriendRequestsModal() {
   const modal = document.getElementById('genericModal');
   if (modal) {
