@@ -1,15 +1,19 @@
 // Global state
+// Check if user is in sign up mode (new user from sign up form)
+const isSignUpMode = localStorage.getItem('isSignUpMode') === 'true';
+const signUpPrefix = isSignUpMode ? 'signup_' : '';
+
 // Load study points from localStorage if available, otherwise use default
-let savedStudyPoints = localStorage.getItem('userStudyPoints');
-let initialStudyPoints = savedStudyPoints ? parseInt(savedStudyPoints) : 100;
+let savedStudyPoints = localStorage.getItem(signUpPrefix + 'userStudyPoints');
+let initialStudyPoints = savedStudyPoints ? parseInt(savedStudyPoints) : (isSignUpMode ? 0 : 100);
 
 let currentUser = {
-    username: 'John Doe',
-    userId: '1234-1234-1234',
+    username: isSignUpMode ? (localStorage.getItem('currentUsername') || 'New User') : 'John Doe',
+    userId: isSignUpMode ? (localStorage.getItem('currentUserId') || '0000-0000-0000') : '1234-1234-1234',
     studyPoints: initialStudyPoints,
-    totalStudyTime: '128h 20m',
-    thisWeekTime: '31h 50m',
-    studyStreak: 7
+    totalStudyTime: isSignUpMode ? '0h 0m' : '128h 20m',
+    thisWeekTime: isSignUpMode ? '0h 0m' : '31h 50m',
+    studyStreak: isSignUpMode ? 0 : 7
 };
 
 // Study room time (adjustable in app.js for demonstration)
@@ -24,23 +28,30 @@ let filteredStudyRooms = [];
 let isSearchingRooms = false;
 
 let friendRequests = [];
-const savedRequests = localStorage.getItem('friendRequests');
-if (savedRequests) {
-  try {
-    friendRequests = JSON.parse(savedRequests);
-  } catch (e) {
-    // fallback to default if corrupted
-    friendRequests = [
-      { userId: '5555-5555-6666', username: 'Kevin Lam', status: 'waiting', studyTime: '45h 5m' },
-      { userId: '8888-2222-1444', username: 'Maggie Ho', status: 'waiting', studyTime: '25h 5m' }
-    ];
-  }
+const savedRequests = localStorage.getItem(signUpPrefix + 'friendRequests');
+if (isSignUpMode) {
+  // Sign up mode: empty friend requests
+  friendRequests = [];
+  localStorage.setItem(signUpPrefix + 'friendRequests', JSON.stringify(friendRequests));
 } else {
-  friendRequests = [
-    { userId: '5555-5555-6666-3333', username: 'Kevin Lam', status: 'waiting', studyTime: '5h 8m' },
-    { userId: '8888-2222-1444-9999', username: 'Maggie Ho', status: 'waiting', studyTime: '67h 25m' }
-  ];
-  localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
+  // Login mode: load existing requests
+  if (savedRequests) {
+    try {
+      friendRequests = JSON.parse(savedRequests);
+    } catch (e) {
+      // fallback to default if corrupted
+      friendRequests = [
+        { userId: '5555-5555-6666', username: 'Kevin Lam', status: 'waiting', studyTime: '45h 5m' },
+        { userId: '8888-2222-1444', username: 'Maggie Ho', status: 'waiting', studyTime: '25h 5m' }
+      ];
+    }
+  } else {
+    friendRequests = [
+      { userId: '5555-5555-6666-3333', username: 'Kevin Lam', status: 'waiting', studyTime: '5h 8m' },
+      { userId: '8888-2222-1444-9999', username: 'Maggie Ho', status: 'waiting', studyTime: '67h 25m' }
+    ];
+    localStorage.setItem(signUpPrefix + 'friendRequests', JSON.stringify(friendRequests));
+  }
 }
 
 // Initialize mock data
@@ -115,19 +126,54 @@ function initMockData() {
     // Combine mock data with uploaded resources
     resources = [...resources, ...uploadedResources];
 
-    // Friends (default 10 friends)
-    friends = [
-        { userId: '1111-1111-1111-1111', username: 'Alice Chen', status: 'online', studyTime: '95h 30m' },
-        { userId: '2222-2222-2222-2222', username: 'Bob Zhang', status: 'offline', studyTime: '120h 15m' },
-        { userId: '3333-3333-3333-3333', username: 'Charlie Wong', status: 'online', studyTime: '88h 45m' },
-        { userId: '4444-4444-4444-4444', username: 'Diana Lee', status: 'offline', studyTime: '105h 20m' },
-        { userId: '5555-5555-5555-5555', username: 'Eric Liu', status: 'online', studyTime: '112h 10m' },
-        { userId: '6666-6666-6666-6666', username: 'Fiona Tan', status: 'offline', studyTime: '98h 55m' },
-        { userId: '7777-7777-7777-7777', username: 'George Wang', status: 'online', studyTime: '135h 40m' },
-        { userId: '8888-8888-8888-8888', username: 'Helen Ng', status: 'offline', studyTime: '87h 25m' },
-        { userId: '9999-9999-9999-9999', username: 'Ivan Chan', status: 'online', studyTime: '110h 50m' },
-        { userId: '0000-0000-0000-0000', username: 'Julia Ho', status: 'offline', studyTime: '102h 35m' }
-    ];
+    // Friends - empty for sign up mode, default 10 for login mode
+    if (isSignUpMode) {
+        const savedFriends = localStorage.getItem(signUpPrefix + 'friends');
+        if (savedFriends) {
+            try {
+                friends = JSON.parse(savedFriends);
+            } catch (e) {
+                friends = [];
+            }
+        } else {
+            friends = [];
+            localStorage.setItem(signUpPrefix + 'friends', JSON.stringify(friends));
+        }
+    } else {
+        const savedFriends = localStorage.getItem('friends');
+        if (savedFriends) {
+            try {
+                friends = JSON.parse(savedFriends);
+            } catch (e) {
+                friends = [
+                    { userId: '1111-1111-1111-1111', username: 'Alice Chen', status: 'online', studyTime: '95h 30m' },
+                    { userId: '2222-2222-2222-2222', username: 'Bob Zhang', status: 'offline', studyTime: '120h 15m' },
+                    { userId: '3333-3333-3333-3333', username: 'Charlie Wong', status: 'online', studyTime: '88h 45m' },
+                    { userId: '4444-4444-4444-4444', username: 'Diana Lee', status: 'offline', studyTime: '105h 20m' },
+                    { userId: '5555-5555-5555-5555', username: 'Eric Liu', status: 'online', studyTime: '112h 10m' },
+                    { userId: '6666-6666-6666-6666', username: 'Fiona Tan', status: 'offline', studyTime: '98h 55m' },
+                    { userId: '7777-7777-7777-7777', username: 'George Wang', status: 'online', studyTime: '135h 40m' },
+                    { userId: '8888-8888-8888-8888', username: 'Helen Ng', status: 'offline', studyTime: '87h 25m' },
+                    { userId: '9999-9999-9999-9999', username: 'Ivan Chan', status: 'online', studyTime: '110h 50m' },
+                    { userId: '0000-0000-0000-0000', username: 'Julia Ho', status: 'offline', studyTime: '102h 35m' }
+                ];
+            }
+        } else {
+            friends = [
+                { userId: '1111-1111-1111-1111', username: 'Alice Chen', status: 'online', studyTime: '95h 30m' },
+                { userId: '2222-2222-2222-2222', username: 'Bob Zhang', status: 'offline', studyTime: '120h 15m' },
+                { userId: '3333-3333-3333-3333', username: 'Charlie Wong', status: 'online', studyTime: '88h 45m' },
+                { userId: '4444-4444-4444-4444', username: 'Diana Lee', status: 'offline', studyTime: '105h 20m' },
+                { userId: '5555-5555-5555-5555', username: 'Eric Liu', status: 'online', studyTime: '112h 10m' },
+                { userId: '6666-6666-6666-6666', username: 'Fiona Tan', status: 'offline', studyTime: '98h 55m' },
+                { userId: '7777-7777-7777-7777', username: 'George Wang', status: 'online', studyTime: '135h 40m' },
+                { userId: '8888-8888-8888-8888', username: 'Helen Ng', status: 'offline', studyTime: '87h 25m' },
+                { userId: '9999-9999-9999-9999', username: 'Ivan Chan', status: 'online', studyTime: '110h 50m' },
+                { userId: '0000-0000-0000-0000', username: 'Julia Ho', status: 'offline', studyTime: '102h 35m' }
+            ];
+        }
+        localStorage.setItem('friends', JSON.stringify(friends));
+    }
 }
 
 // Login functionality
@@ -143,6 +189,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (loginForm) {
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            // Clear sign up mode when logging in
+            localStorage.setItem('isSignUpMode', 'false');
             window.location.href = 'home.html';
         });
     }
@@ -200,7 +248,8 @@ function updateUserInfo() {
     }
     
     // Load saved study points from localStorage
-    const savedStudyPoints = localStorage.getItem('userStudyPoints');
+    const prefix = isSignUpMode ? signUpPrefix : '';
+    const savedStudyPoints = localStorage.getItem(prefix + 'userStudyPoints');
     if (savedStudyPoints) {
         currentUser.studyPoints = parseInt(savedStudyPoints);
     }
@@ -569,7 +618,8 @@ function submitUpload() {
     // Award points only once per upload, regardless of number of files
     currentUser.studyPoints += points;
     // Save to localStorage for persistence
-    localStorage.setItem('userStudyPoints', currentUser.studyPoints.toString());
+    const prefix = isSignUpMode ? signUpPrefix : '';
+    localStorage.setItem(prefix + 'userStudyPoints', currentUser.studyPoints.toString());
     updateUserInfo();
     updateResourceHubStudyPoints();
     
@@ -745,7 +795,8 @@ function confirmDownload(resourceId, points) {
     if (currentUser.studyPoints >= points) {
         currentUser.studyPoints -= points;
         // Save to localStorage for persistence
-        localStorage.setItem('userStudyPoints', currentUser.studyPoints.toString());
+        const prefix = isSignUpMode ? signUpPrefix : '';
+        localStorage.setItem(prefix + 'userStudyPoints', currentUser.studyPoints.toString());
         updateUserInfo();
         updateResourceHubStudyPoints();
         
@@ -889,52 +940,6 @@ function displayLeaderboard() {
     });
     
     // Friends leaderboard - include all friends plus current user
-    // Use this week time for all friends (mock data - in real app would come from database)
-    const friendWeekTimes = ['35h 40m', '32h 50m', '30h 20m', '28h 10m', '26h 55m', '25h 30m', '24h 15m', '23h 45m', '22h 20m', '21h 10m'];
-    
-    const allFriendsData = friends.map((friend, index) => ({
-        rank: index + 1,
-        username: friend.username,
-        time: friendWeekTimes[index] || '20h 0m', // Use this week time, not total time
-        isCurrentUser: false
-    }));
-    
-    // Add current user to friends leaderboard (assume user is in top 3 at rank 3)
-    // Use saved username from localStorage if available
-    const displayUsername = localStorage.getItem('currentUsername') || currentUser.username;
-    allFriendsData.push({
-        rank: allFriendsData.length + 1,
-        username: displayUsername,
-        time: currentUser.thisWeekTime,
-        isCurrentUser: true
-    });
-    
-    // Sort by time (descending) and assign ranks
-    allFriendsData.sort((a, b) => {
-        const timeA = parseTimeToMinutes(a.time);
-        const timeB = parseTimeToMinutes(b.time);
-        return timeB - timeA;
-    });
-    
-    allFriendsData.forEach((item, index) => {
-        item.rank = index + 1;
-    });
-    
-    // Ensure user is in top 3 for demonstration (if not already)
-    const userIndex = allFriendsData.findIndex(f => f.isCurrentUser);
-    if (userIndex >= 3) {
-        // Move user to rank 3
-        const user = allFriendsData.splice(userIndex, 1)[0];
-        allFriendsData.splice(2, 0, user);
-        // Reassign ranks
-        allFriendsData.forEach((item, index) => {
-            item.rank = index + 1;
-        });
-    }
-    
-    // Check if user is in top 3
-    const userInTop3 = allFriendsData.findIndex(f => f.isCurrentUser) < 3;
-    
     const globalContainer = document.getElementById('globalLeaderboard');
     const friendsContainer = document.getElementById('friendsLeaderboard');
     
@@ -949,6 +954,68 @@ function displayLeaderboard() {
     }
     
     if (friendsContainer) {
+        // Check if in sign up mode and show empty state
+        if (isSignUpMode && friends.length === 0) {
+            friendsContainer.innerHTML = `
+                <div style="text-align: center; padding: 60px 20px; color: #666;">
+                    <i data-lucide="users" style="width: 64px; height: 64px; margin: 0 auto 20px; display: block; color: #1565C0;"></i>
+                    <h3 style="margin-bottom: 10px; color: #333;">No Friends Yet</h3>
+                    <p style="margin-bottom: 30px;">Add friends to see your weekly friends leaderboard!</p>
+                    <a href="friends.html" style="display: inline-block; background-color: #1565C0; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">Add Friends</a>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+            return;
+        }
+        
+        // Use this week time for all friends (mock data - in real app would come from database)
+        const friendWeekTimes = ['35h 40m', '32h 50m', '30h 20m', '28h 10m', '26h 55m', '25h 30m', '24h 15m', '23h 45m', '22h 20m', '21h 10m'];
+        
+        const allFriendsData = friends.map((friend, index) => ({
+            rank: index + 1,
+            username: friend.username,
+            time: friendWeekTimes[index] || '20h 0m', // Use this week time, not total time
+            isCurrentUser: false
+        }));
+        
+        // Add current user to friends leaderboard (assume user is in top 3 at rank 3)
+        // Use saved username from localStorage if available
+        const displayUsername = localStorage.getItem('currentUsername') || currentUser.username;
+        allFriendsData.push({
+            rank: allFriendsData.length + 1,
+            username: displayUsername,
+            time: currentUser.thisWeekTime,
+            isCurrentUser: true
+        });
+        
+        // Sort by time (descending) and assign ranks
+        allFriendsData.sort((a, b) => {
+            const timeA = parseTimeToMinutes(a.time);
+            const timeB = parseTimeToMinutes(b.time);
+            return timeB - timeA;
+        });
+        
+        allFriendsData.forEach((item, index) => {
+            item.rank = index + 1;
+        });
+        
+        // Ensure user is in top 3 for demonstration (if not already)
+        const userIndex = allFriendsData.findIndex(f => f.isCurrentUser);
+        if (userIndex >= 3) {
+            // Move user to rank 3
+            const user = allFriendsData.splice(userIndex, 1)[0];
+            allFriendsData.splice(2, 0, user);
+            // Reassign ranks
+            allFriendsData.forEach((item, index) => {
+                item.rank = index + 1;
+            });
+        }
+        
+        // Check if user is in top 3
+        const userInTop3 = allFriendsData.findIndex(f => f.isCurrentUser) < 3;
+        
         friendsContainer.innerHTML = allFriendsData.map(item => {
             const isUserInTop3 = item.isCurrentUser && item.rank <= 3;
             return `
@@ -976,6 +1043,37 @@ function displayFriends() {
     if (!container) return;
     
     container.innerHTML = '';
+    
+    // Check if in sign up mode and show empty state
+    if (isSignUpMode && friends.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 60px 20px; color: #666;">
+                <i data-lucide="user-plus" style="width: 64px; height: 64px; margin: 0 auto 20px; display: block; color: #1565C0;"></i>
+                <h3 style="margin-bottom: 10px; color: #333;">No Friends Yet</h3>
+                <p style="margin-bottom: 30px;">Start building your study network by adding friends!</p>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+        return;
+    }
+    
+    if (friends.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 60px 20px; color: #666;">
+                <i data-lucide="user-plus" style="width: 64px; height: 64px; margin: 0 auto 20px; display: block; color: #1565C0;"></i>
+                <h3 style="margin-bottom: 10px; color: #333;">No Friends Yet</h3>
+                <p style="margin-bottom: 30px;">Start building your study network by adding friends!</p>
+                <button class="create-btn" onclick="addFriend()" style="margin: 0 auto;">Add Friend</button>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+        return;
+    }
+    
     friends.forEach(friend => {
         const friendCard = document.createElement('div');
         friendCard.className = 'friend-card';
@@ -987,7 +1085,7 @@ function displayFriends() {
                 <div class="friend-status ${friend.status}">${friend.status === 'online' ? 'Online' : 'Offline'}</div>
                 <div class="friend-time">Total Study Time: ${friend.studyTime}</div>
             </div>
-<button class="remove-btn" style="background-color:#f44336;color:white;border-radius:5px;padding:7px 15px" onclick="removeFriend('${friend.userId}')">Remove</button>
+            <button class="remove-btn" style="background-color:#f44336;color:white;border-radius:5px;padding:7px 15px" onclick="confirmRemoveFriend('${friend.userId}', '${friend.username.replace(/'/g, "\\'")}')">Remove</button>
         `;
         container.appendChild(friendCard);
     });
@@ -1087,6 +1185,11 @@ function confirmAddFriend(userId, username) {
         showNotification('This friend is already in your list.', 'error');
     } else {
         friends.push(newFriend);
+        if (isSignUpMode) {
+            localStorage.setItem(signUpPrefix + 'friends', JSON.stringify(friends));
+        } else {
+            localStorage.setItem('friends', JSON.stringify(friends));
+        }
         displayFriends();
         showNotification('Friend added successfully.', 'success');
     }
@@ -1095,16 +1198,103 @@ function confirmAddFriend(userId, username) {
     closeAddFriendModal();
 }
 
+function renderFriendRequestsModal() {
+  const modal = document.getElementById('genericModal');
+  if (!modal) return;
+  
+  // For sign up mode, always show empty state
+  if (isSignUpMode || friendRequests.length === 0) {
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Friend Requests</h2>
+          <button class="close-btn" onclick="closeFriendRequestsModal()">&times;</button>
+        </div>
+        <div style="padding: 40px; text-align: center;">
+          <i data-lucide="bell-off" style="width: 64px; height: 64px; margin: 0 auto 20px; display: block; color: #999;"></i>
+          <h3 style="margin-bottom: 10px; color: #333;">No Friend Requests</h3>
+          <p style="color: #666;">You don't have any pending friend requests yet.</p>
+        </div>
+      </div>
+    `;
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+  } else {
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Friend Requests</h2>
+          <button class="close-btn" onclick="closeFriendRequestsModal()">&times;</button>
+        </div>
+        <div style="padding: 20px; max-height: 400px; overflow-y: auto;">
+          ${friendRequests.map(req => `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee;">
+              <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="width: 50px; height: 50px; border-radius: 50%; background-color: #1565C0; color: white; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 18px;">
+                  ${getUserIconAbbreviation(req.username)}
+                </div>
+                <div>
+                  <div style="font-weight: 500; margin-bottom: 5px;">${req.username}</div>
+                  <div style="color: #666; font-size: 14px;">Study Time: ${req.studyTime}</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <button class="submit-btn" onclick="acceptFriendRequest('${req.userId}')" style="background-color: #4caf50; padding: 8px 16px;">Accept</button>
+                <button class="submit-btn" onclick="declineFriendRequest('${req.userId}')" style="background-color: #f44336; padding: 8px 16px;">Decline</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+  modal.style.display = 'block';
+}
+
+function closeFriendRequestsModal() {
+  const modal = document.getElementById('genericModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
 function acceptFriendRequest(userId) {
+  const request = friendRequests.find(f => f.userId === userId);
+  if (request) {
+    const newFriend = {
+      userId: request.userId,
+      username: request.username,
+      status: 'offline',
+      studyTime: request.studyTime || '0h 0m'
+    };
+    friends.push(newFriend);
+    if (isSignUpMode) {
+      localStorage.setItem(signUpPrefix + 'friends', JSON.stringify(friends));
+    } else {
+      localStorage.setItem('friends', JSON.stringify(friends));
+    }
+  }
   friendRequests = friendRequests.filter(f => f.userId !== userId);
+  if (isSignUpMode) {
+    localStorage.setItem(signUpPrefix + 'friendRequests', JSON.stringify(friendRequests));
+  } else {
+    localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
+  }
   updateRequestCount();
   closeFriendRequestsModal();
+  displayFriends();
   showNotification('Friend accepted!', 'success');
 }
 
 function declineFriendRequest(userId) {
   friendRequests = friendRequests.filter(f => f.userId !== userId);
-   updateRequestCount();
+  if (isSignUpMode) {
+    localStorage.setItem(signUpPrefix + 'friendRequests', JSON.stringify(friendRequests));
+  } else {
+    localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
+  }
+  updateRequestCount();
   closeFriendRequestsModal();
   showNotification('Friend request declined.', 'error');
 }
@@ -1121,10 +1311,47 @@ function updateRequestCount() {
   }
 }
 
+function confirmRemoveFriend(userId, username) {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'removeFriendModal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Remove Friend</h2>
+        <button class="close-btn" onclick="closeRemoveFriendModal()">&times;</button>
+      </div>
+      <div style="padding: 20px; text-align: center;">
+        <p style="margin-bottom: 20px; font-size: 16px;">Are you sure you want to remove <strong>${username}</strong> from your friends list?</p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button class="submit-btn" onclick="removeFriend('${userId}')" style="background-color: #f44336;">Yes, Remove</button>
+          <button class="submit-btn" onclick="closeRemoveFriendModal()" style="background-color: #666;">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.style.display = 'block';
+}
+
+function closeRemoveFriendModal() {
+  const modal = document.getElementById('removeFriendModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.remove();
+  }
+}
+
 function removeFriend(userId) {
   friends = friends.filter(f => f.userId !== userId);
+  if (isSignUpMode) {
+    localStorage.setItem(signUpPrefix + 'friends', JSON.stringify(friends));
+  } else {
+    localStorage.setItem('friends', JSON.stringify(friends));
+  }
+  closeRemoveFriendModal();
   displayFriends();
-  showNotification('Friend removed.', 'success'); // If you use notifications elsewhere
+  showNotification('Friend removed.', 'success');
 }
 
 // Pagination
@@ -1496,7 +1723,24 @@ function resetProfileIcon() {
 }
 
 function saveEmail() {
-    showNotification('Email updated successfully.', 'success');
+    const currentEmail = document.getElementById('currentEmail');
+    const newEmail = document.getElementById('newEmail');
+    const confirmEmail = document.getElementById('confirmEmail');
+    
+    if (newEmail && confirmEmail && newEmail.value && confirmEmail.value) {
+        if (newEmail.value !== confirmEmail.value) {
+            showNotification('New email and confirmation do not match.', 'error');
+            return;
+        }
+        // Save new email
+        localStorage.setItem('currentUserEmail', newEmail.value);
+        if (currentEmail) {
+            currentEmail.value = newEmail.value;
+        }
+        showNotification('Email updated successfully.', 'success');
+    } else {
+        showNotification('Please fill in all email fields.', 'error');
+    }
 }
 
 function savePassword() {
@@ -1505,6 +1749,8 @@ function savePassword() {
 
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
+        // Clear sign up mode on logout
+        localStorage.setItem('isSignUpMode', 'false');
         window.location.href = 'index.html';
     }
 }
@@ -1534,16 +1780,18 @@ function formatSecondsToHoursMinutes(totalSeconds) {
  */
 function updateUserStudyTotals(secondsToAdd) {
     secondsToAdd = Math.max(0, Math.floor(Number(secondsToAdd) || 0));
+    const prefix = isSignUpMode ? signUpPrefix : '';
+    
     // Load persisted base values (fallback to currentUser fields)
-    const persistedTotal = parseInt(localStorage.getItem('userTotalStudySeconds') || '0', 10) || parseDurationToSeconds(currentUser.totalStudyTime);
-    const persistedWeek  = parseInt(localStorage.getItem('userThisWeekSeconds') || '0', 10) || parseDurationToSeconds(currentUser.thisWeekTime);
+    const persistedTotal = parseInt(localStorage.getItem(prefix + 'userTotalStudySeconds') || '0', 10) || parseDurationToSeconds(currentUser.totalStudyTime);
+    const persistedWeek  = parseInt(localStorage.getItem(prefix + 'userThisWeekSeconds') || '0', 10) || parseDurationToSeconds(currentUser.thisWeekTime);
 
     const newTotalSeconds = persistedTotal + secondsToAdd;
     const newWeekSeconds  = persistedWeek + secondsToAdd;
 
     // Persist raw seconds for future accurate arithmetic
-    localStorage.setItem('userTotalStudySeconds', String(newTotalSeconds));
-    localStorage.setItem('userThisWeekSeconds', String(newWeekSeconds));
+    localStorage.setItem(prefix + 'userTotalStudySeconds', String(newTotalSeconds));
+    localStorage.setItem(prefix + 'userThisWeekSeconds', String(newWeekSeconds));
 
     // Update currentUser fields (display format: "Hh Mm")
     currentUser.totalStudyTime = formatSecondsToHoursMinutes(newTotalSeconds);
@@ -1558,8 +1806,16 @@ function updateUserStudyTotals(secondsToAdd) {
 
 // If there are persisted values already, initialize currentUser fields on load
 (function initPersistedTotals() {
-    const savedTotal = parseInt(localStorage.getItem('userTotalStudySeconds') || '', 10);
-    const savedWeek = parseInt(localStorage.getItem('userThisWeekSeconds') || '', 10);
+    const prefix = isSignUpMode ? signUpPrefix : '';
+    const savedTotal = parseInt(localStorage.getItem(prefix + 'userTotalStudySeconds') || '', 10);
+    let savedWeek = parseInt(localStorage.getItem(prefix + 'userThisWeekSeconds') || '', 10);
+    
+    // For login mode, if no saved week time, initialize with default 31h 50m (114600 seconds)
+    if (!isSignUpMode && Number.isNaN(savedWeek)) {
+        savedWeek = 31 * 3600 + 50 * 60; // 31h 50m = 114600 seconds
+        localStorage.setItem('userThisWeekSeconds', String(savedWeek));
+    }
+    
     if (!Number.isNaN(savedTotal)) {
         currentUser.totalStudyTime = formatSecondsToHoursMinutes(savedTotal);
     }
@@ -1659,7 +1915,7 @@ const WEEKLY_MISSIONS_TEMPLATE = [
 ];
 
 function loadMissions(type) {
-    const key = type === 'daily' ? 'dailyMissionsState' : 'weeklyMissionsState';
+    const key = (isSignUpMode ? signUpPrefix : '') + (type === 'daily' ? 'dailyMissionsState' : 'weeklyMissionsState');
     const template = type === 'daily' ? DAILY_MISSIONS_TEMPLATE : WEEKLY_MISSIONS_TEMPLATE;
 
     let saved = [];
@@ -1670,13 +1926,28 @@ function loadMissions(type) {
 
     const merged = template.map(m => {
         const s = savedMap[m.id];
+        let progressSeconds = s ? (s.progressSeconds || 0) : 0;
+        let claimed = s ? !!s.claimed : false;
+        
+        // For sign up mode, reset all missions except daily_login
+        if (isSignUpMode && m.id !== 'daily_login') {
+            progressSeconds = 0;
+            claimed = false;
+        }
+        
+        // For weekly_7h_goal, sync with this week's study time if not claimed
+        if (m.id === 'weekly_7h_goal' && !claimed) {
+            const thisWeekSeconds = parseInt(localStorage.getItem((isSignUpMode ? signUpPrefix : '') + 'userThisWeekSeconds') || '0', 10);
+            progressSeconds = Math.min(m.targetSeconds, thisWeekSeconds);
+        }
+        
         return {
             id: m.id,
             title: m.title,
             targetSeconds: m.targetSeconds || 0,
             points: m.points || 0,
-            progressSeconds: s ? (s.progressSeconds || 0) : 0,
-            claimed: s ? !!s.claimed : false
+            progressSeconds: progressSeconds,
+            claimed: claimed
         };
     });
 
@@ -1689,7 +1960,8 @@ function loadMissions(type) {
     return merged;
 }
 function saveMissions(type, data) {
-    localStorage.setItem(type === 'daily' ? 'dailyMissionsState' : 'weeklyMissionsState', JSON.stringify(data));
+    const key = (isSignUpMode ? signUpPrefix : '') + (type === 'daily' ? 'dailyMissionsState' : 'weeklyMissionsState');
+    localStorage.setItem(key, JSON.stringify(data));
 }
 window.getDailyMissions = () => loadMissions('daily');
 window.getWeeklyMissions = () => loadMissions('weekly');
@@ -1857,16 +2129,84 @@ function renderMissionsUI() {
 
   if (wCont) {
     wCont.innerHTML = weekly.map(m => {
-      const percent = m.targetSeconds > 0 ? Math.round((m.progressSeconds || 0) / m.targetSeconds * 100) : (m.claimed ? 100 : 0);
-      const progressText = m.targetSeconds > 0
+      let percent = m.targetSeconds > 0 ? Math.round((m.progressSeconds || 0) / m.targetSeconds * 100) : (m.claimed ? 100 : 0);
+      let progressText = m.targetSeconds > 0
         ? `${formatStudyDurationHMS(m.progressSeconds || 0)} / ${formatStudyDurationHMS(m.targetSeconds)} (${percent}%)`
         : (m.claimed ? 'Claimed' : 'Ready');
+      
+      // For weekly_7h_goal, check this week's study time from localStorage
+      if (m.id === 'weekly_7h_goal' && !m.claimed) {
+        const prefix = isSignUpMode ? signUpPrefix : '';
+        let thisWeekSeconds = parseInt(localStorage.getItem(prefix + 'userThisWeekSeconds') || '0', 10);
+        // For login mode, if no saved value, use default 31h 50m
+        if (!isSignUpMode && thisWeekSeconds === 0) {
+          thisWeekSeconds = 31 * 3600 + 50 * 60; // 31h 50m = 114600 seconds
+        }
+        const targetSeconds = 7 * 3600; // 7 hours
+        if (thisWeekSeconds >= targetSeconds) {
+          m.progressSeconds = targetSeconds;
+          percent = 100;
+          progressText = `${formatStudyDurationHMS(thisWeekSeconds)} / ${formatStudyDurationHMS(targetSeconds)} (100%)`;
+        } else {
+          m.progressSeconds = thisWeekSeconds;
+          percent = Math.round((thisWeekSeconds / targetSeconds) * 100);
+          progressText = `${formatStudyDurationHMS(thisWeekSeconds)} / ${formatStudyDurationHMS(targetSeconds)} (${percent}%)`;
+        }
+      }
+      
+      // For weekly_upload_resources, show progress
+      if (m.id === 'weekly_upload_resources' && !m.claimed) {
+        const savedResources = localStorage.getItem('uploadedResources');
+        let uploadedResources = [];
+        if (savedResources) {
+          try {
+            uploadedResources = JSON.parse(savedResources);
+          } catch (e) {
+            uploadedResources = [];
+          }
+        }
+        const targetCount = 3;
+        const currentCount = isSignUpMode ? 0 : uploadedResources.length;
+        percent = Math.min(100, Math.round((currentCount / targetCount) * 100));
+        progressText = `${currentCount} / ${targetCount} resources uploaded`;
+        // Set progressSeconds for display purposes (not used for claiming)
+        m.progressSeconds = currentCount;
+        m.targetSeconds = targetCount;
+      }
+      
       let canClaim = false;
       if (!m.claimed) {
-        if (m.targetSeconds === 0 && (m.id !== 'weekly_top100' && m.id !== 'weekly_top3_friends')) canClaim = true;
-        else if (m.id === 'weekly_7h_goal' && m.progressSeconds >= m.targetSeconds) canClaim = true;
+        if (m.id === 'weekly_upload_resources') {
+          // Check uploaded resources count
+          const savedResources = localStorage.getItem('uploadedResources');
+          let uploadedResources = [];
+          if (savedResources) {
+            try {
+              uploadedResources = JSON.parse(savedResources);
+            } catch (e) {
+              uploadedResources = [];
+            }
+          }
+          // For sign up mode, always incomplete (0 resources)
+          // For login mode, check if >= 3 resources uploaded
+          if (!isSignUpMode && uploadedResources.length >= 3) {
+            canClaim = true;
+          }
+        }
+        else if (m.targetSeconds === 0 && (m.id !== 'weekly_top100' && m.id !== 'weekly_top3_friends' && m.id !== 'weekly_upload_resources')) canClaim = true;
+        else if (m.id === 'weekly_7h_goal') {
+          const prefix = isSignUpMode ? signUpPrefix : '';
+          // For login mode, if no saved value, use default 31h 50m
+          let thisWeekSeconds = parseInt(localStorage.getItem(prefix + 'userThisWeekSeconds') || '0', 10);
+          if (!isSignUpMode && thisWeekSeconds === 0) {
+            thisWeekSeconds = 31 * 3600 + 50 * 60; // 31h 50m = 114600 seconds
+          }
+          const targetSeconds = 7 * 3600; // 7 hours
+          if (thisWeekSeconds >= targetSeconds) canClaim = true;
+        }
         else if (m.id === 'weekly_top100' && isOnGlobalTop100ThisWeek && isOnGlobalTop100ThisWeek()) canClaim = true;
         else if (m.id === 'weekly_top3_friends') {
+          // Check if user is already in top 3 on friends leaderboard
           const r = getFriendRankThisWeek && getFriendRankThisWeek();
           if (r && r <= 3) canClaim = true;
         }
@@ -1877,7 +2217,7 @@ function renderMissionsUI() {
             <span class="mission-text">${m.title}</span>
             <span class="mission-points">+${m.points} pts</span>
           </div>
-          ${m.targetSeconds>0?`<div class="progress-bar-container">
+          ${(m.targetSeconds>0 || m.id === 'weekly_upload_resources')?`<div class="progress-bar-container">
             <div class="progress-bar-wrapper">
               <div class="progress-bar-completed" style="width:${percent}%"></div>
               <div class="progress-bar-remaining" style="width:${100-percent}%"></div>
@@ -1900,9 +2240,39 @@ function claimMission(type, missionId) {
   const list = loadMissions(type);
   const m = list.find(x => x.id === missionId);
   if (!m || m.claimed) return;
-  const achieved = m.id === 'daily_login'
-    ? true
-    : (m.targetSeconds === 0 ? true : m.progressSeconds >= m.targetSeconds);
+  
+  let achieved = false;
+  if (m.id === 'daily_login') {
+    achieved = true;
+  } else if (m.id === 'weekly_upload_resources') {
+    // Check uploaded resources count
+    const savedResources = localStorage.getItem('uploadedResources');
+    let uploadedResources = [];
+    if (savedResources) {
+      try {
+        uploadedResources = JSON.parse(savedResources);
+      } catch (e) {
+        uploadedResources = [];
+      }
+    }
+    // For sign up mode, always false (0 resources)
+    // For login mode, check if >= 3 resources uploaded
+    achieved = !isSignUpMode && uploadedResources.length >= 3;
+  } else if (m.targetSeconds === 0) {
+    achieved = true;
+  } else if (m.id === 'weekly_7h_goal') {
+    // Check this week's study time from localStorage
+    const prefix = isSignUpMode ? signUpPrefix : '';
+    let thisWeekSeconds = parseInt(localStorage.getItem(prefix + 'userThisWeekSeconds') || '0', 10);
+    // For login mode, if no saved value, use default 31h 50m
+    if (!isSignUpMode && thisWeekSeconds === 0) {
+      thisWeekSeconds = 31 * 3600 + 50 * 60; // 31h 50m = 114600 seconds
+    }
+    const targetSeconds = 7 * 3600; // 7 hours
+    achieved = thisWeekSeconds >= targetSeconds;
+  } else {
+    achieved = m.progressSeconds >= m.targetSeconds;
+  }
 
   if (type === 'weekly') {
     if (missionId === 'weekly_top100' && !(isOnGlobalTop100ThisWeek && isOnGlobalTop100ThisWeek())) return;
@@ -1916,7 +2286,8 @@ function claimMission(type, missionId) {
   m.claimed = true;
   saveMissions(type, list);
   currentUser.studyPoints = (currentUser.studyPoints || 0) + (m.points || 0);
-  localStorage.setItem('userStudyPoints', String(currentUser.studyPoints));
+  const prefix = isSignUpMode ? signUpPrefix : '';
+  localStorage.setItem(prefix + 'userStudyPoints', String(currentUser.studyPoints));
   try { updateUserInfo && updateUserInfo(); } catch(_) {}
   renderMissionsUI();
 }

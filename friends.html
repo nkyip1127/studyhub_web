@@ -91,8 +91,12 @@
             var requestsBtn = document.getElementById('friendRequestsBtn');
             if(requestsBtn) {
                 requestsBtn.onclick = function() {
-                    if(typeof showFriendRequests === 'function') showFriendRequests();
+                    if(typeof renderFriendRequestsModal === 'function') renderFriendRequestsModal();
                 };
+            }
+            // Update request count on load
+            if (typeof updateRequestCount === 'function') {
+                updateRequestCount();
             }
         };
         function formatUserId(input) {

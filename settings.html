@@ -75,7 +75,7 @@
             <div class="settings-form">
                 <div class="form-group">
                     <label for="currentEmail">Enter Current Email</label>
-                    <input type="email" id="currentEmail" value="john.doe@example.com">
+                    <input type="email" id="currentEmail" value="">
                 </div>
                 <div class="form-group">
                     <label for="newEmail">Enter New Email</label>
@@ -133,6 +133,17 @@
                     usernameInput.value = currentUser.username;
                 } else {
                     usernameInput.value = 'John Doe';
+                }
+            }
+            
+            // Load saved email from localStorage (sign up email or default)
+            const savedEmail = localStorage.getItem('currentUserEmail');
+            const currentEmailInput = document.getElementById('currentEmail');
+            if (currentEmailInput) {
+                if (savedEmail) {
+                    currentEmailInput.value = savedEmail;
+                } else {
+                    currentEmailInput.value = 'john.doe@example.com';
                 }
             }
             

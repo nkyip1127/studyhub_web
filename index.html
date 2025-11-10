@@ -127,6 +127,14 @@
                     localStorage.setItem('currentUsername', username);
                     localStorage.setItem('currentUserEmail', email);
                     localStorage.setItem('currentUserId', currentUser.userId);
+                    // Set sign up mode flag
+                    localStorage.setItem('isSignUpMode', 'true');
+                    // Initialize sign up mode data
+                    localStorage.setItem('signup_userStudyPoints', '0');
+                    localStorage.setItem('signup_userTotalStudySeconds', '0');
+                    localStorage.setItem('signup_userThisWeekSeconds', '0');
+                    localStorage.setItem('signup_friends', JSON.stringify([]));
+                    localStorage.setItem('signup_friendRequests', JSON.stringify([]));
                 }
                 
                 // Redirect to homepage
