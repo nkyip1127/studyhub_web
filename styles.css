@@ -841,6 +841,41 @@ input:checked + .slider:before {
     background: white;
 }
 
+/* Ensure every participant block is identical size (filled or empty) */
+.participants-grid .participant-block,
+.participants-grid .participant-block.empty {
+    height: 130px;       /* adjust this value to make blocks shorter/taller */
+    min-height: 130px;
+    max-height: 130px;
+    box-sizing: border-box;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* Keep avatar and text consistent inside fixed block */
+.participants-grid .participant-icon {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 8px;
+}
+
+.participants-grid .participant-name,
+.participants-grid .participant-time {
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0;
+}
+
 .participant-icon {
     width: 50px;
     height: 50px;
@@ -1420,6 +1455,52 @@ input:checked + .slider:before {
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
+}
+
+/* Improved "Get" button appearance (available = green, disabled = grey) */
+.get-btn {
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 0;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 120ms ease, transform 80ms ease, opacity 120ms ease;
+    color: #ffffff;
+    min-width: 72px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+}
+
+/* available = green */
+.get-btn.available {
+    background-color: #20c997;
+}
+.get-btn.available:hover { background-color: #18ad82; }
+.get-btn.available:active { transform: translateY(1px); }
+
+/* disabled = grey */
+.get-btn.disabled,
+.get-btn[disabled] {
+    background-color: #c8c8c8;
+    cursor: not-allowed;
+    color: #ffffff;
+    opacity: 0.95;
+    box-shadow: none;
+}
+
+/* claimed state */
+.get-btn.claimed {
+    background-color: #6c757d;
+    cursor: default;
+    color: #ffffff;
+    opacity: 0.9;
+}
+
+/* mission-actions spacing */
+.mission-item .mission-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
 }
 
 /* Responsive */

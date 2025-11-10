@@ -1095,50 +1095,139 @@ function changePage(page) {
     if (document.getElementById('resourcesContainer')) displayResources();
 }
 
-// Study Room Alert Notification
-let studyRoomTimer = null;
-let alertTimer = null;
+// ---------------- Study room alert (configurable, centralized) ----------------
+// Change these values anytime to control behavior:
+const ALERT_THRESHOLD_SECONDS = 70;        // show alert when >= this many seconds in room
+const ALERT_CHECK_INTERVAL_SECONDS = 70;   // how often room page should invoke check (seconds)
+const KICK_COUNTDOWN_SECONDS = 10;          // seconds user has to confirm before auto-kick
 
-function startStudyRoomTimer() {
-    // Simulate 50 minutes
-    studyRoomTimer = setTimeout(() => {
-        showStudyRoomAlert();
-    }, 10000); // 10 seconds for demo (should be 50 minutes)
+// expose to pages
+window.ALERT_THRESHOLD_SECONDS = ALERT_THRESHOLD_SECONDS;
+window.ALERT_CHECK_INTERVAL_SECONDS = ALERT_CHECK_INTERVAL_SECONDS;
+window.KICK_COUNTDOWN_SECONDS = KICK_COUNTDOWN_SECONDS;
+
+/**
+ * Always-format duration as "Hh Mm Ss" (hours and minutes shown even if zero).
+ * Examples:
+ *  - 29s => "0h 0m 29s"
+ *  - 30m10s => "0h 30m 10s"
+ *  - 1h50m2s => "1h 50m 02s"
+ */
+function formatStudyDurationHMS(totalSeconds) {
+    totalSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours}h ${minutes}m ${String(seconds).padStart(2, '0')}s`;
 }
+window.formatStudyDurationHMS = formatStudyDurationHMS;
 
-function showStudyRoomAlert() {
+// internal countdown state
+let __sr_alertTimer = null;
+let __sr_countdownInterval = null;
+let __sr_countdownRemaining = 0;
+
+/**
+ * Called by study-room-interface with current room time in seconds.
+ * This function ALWAYS shows the alert when totalSeconds >= threshold.
+ * The room page should call this at the desired check interval (default 10s).
+ */
+function checkStudyTimeAlert(totalSeconds) {
     const alert = document.getElementById('studyRoomAlert');
-    if (alert) {
-        alert.classList.add('show');
-        
-        // Auto kick after 2 minutes (20 seconds for demo)
-        alertTimer = setTimeout(() => {
-            kickFromStudyRoom();
-        }, 20000);
-    }
-}
+    const overlay = document.getElementById('alertOverlay');
+    if (!alert) return;
 
+    const threshold = window.ALERT_THRESHOLD_SECONDS || ALERT_THRESHOLD_SECONDS;
+    if (typeof totalSeconds === 'undefined' || totalSeconds < threshold) {
+        // hide and clear any running countdowns
+        if (alert) alert.style.display = 'none';
+        if (overlay) overlay.style.display = 'none';
+        if (__sr_alertTimer) { clearTimeout(__sr_alertTimer); __sr_alertTimer = null; }
+        if (__sr_countdownInterval) { clearInterval(__sr_countdownInterval); __sr_countdownInterval = null; }
+        __sr_countdownRemaining = 0;
+        return;
+    }
+
+    // restart countdown on every invocation so alert reappears each check
+    if (__sr_alertTimer) { clearTimeout(__sr_alertTimer); __sr_alertTimer = null; }
+    if (__sr_countdownInterval) { clearInterval(__sr_countdownInterval); __sr_countdownInterval = null; }
+
+    alert.style.display = 'block';
+    if (overlay) overlay.style.display = 'block';
+
+    const msgEl = alert.querySelector('.alert-message');
+    const kickSeconds = window.KICK_COUNTDOWN_SECONDS || KICK_COUNTDOWN_SECONDS;
+    __sr_countdownRemaining = kickSeconds;
+
+    // initial message
+    if (msgEl) msgEl.textContent = `You have been in this study room for ${formatStudyDurationHMS(totalSeconds)}. Time left to confirm: ${__sr_countdownRemaining}s`;
+
+    __sr_countdownInterval = setInterval(() => {
+        __sr_countdownRemaining--;
+        if (msgEl) msgEl.textContent = `You have been in this study room for ${formatStudyDurationHMS(totalSeconds)}. Time left to confirm: ${__sr_countdownRemaining}s`;
+        if (__sr_countdownRemaining <= 0) {
+            clearInterval(__sr_countdownInterval);
+            __sr_countdownInterval = null;
+            __sr_alertTimer = null;
+            kickFromStudyRoom();
+        }
+    }, 1000);
+
+    // fallback timer
+    __sr_alertTimer = setTimeout(() => {
+        if (__sr_countdownInterval) { clearInterval(__sr_countdownInterval); __sr_countdownInterval = null; }
+        __sr_alertTimer = null;
+        kickFromStudyRoom();
+    }, kickSeconds * 1000);
+}
+window.checkStudyTimeAlert = checkStudyTimeAlert;
+
+/**
+ * Confirm button handler: dismiss current alert and countdown.
+ * Does NOT suppress future alerts — next scheduled check will show it again.
+ */
 function confirmStillHere() {
     const alert = document.getElementById('studyRoomAlert');
-    if (alert) {
-        alert.classList.remove('show');
-        clearTimeout(alertTimer);
-        showNotification('Keep going!', 'success');
-        // Reset timer
-        startStudyRoomTimer();
-    }
+    const overlay = document.getElementById('alertOverlay');
+    if (alert) alert.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+    if (__sr_alertTimer) { clearTimeout(__sr_alertTimer); __sr_alertTimer = null; }
+    if (__sr_countdownInterval) { clearInterval(__sr_countdownInterval); __sr_countdownInterval = null; }
+    __sr_countdownRemaining = 0;
+    showNotification('Keep going!', 'success');
 }
+window.confirmStillHere = confirmStillHere;
 
+/**
+ * Kick logic: clear countdowns, stop room interval, update UI and redirect.
+ */
 function kickFromStudyRoom() {
-    const alert = document.getElementById('studyRoomAlert');
-    if (alert) {
-        alert.classList.remove('show');
+    if (__sr_alertTimer) { clearTimeout(__sr_alertTimer); __sr_alertTimer = null; }
+    if (__sr_countdownInterval) { clearInterval(__sr_countdownInterval); __sr_countdownInterval = null; }
+    __sr_countdownRemaining = 0;
+
+    if (window.studyRoomTimeInterval) {
+        clearInterval(window.studyRoomTimeInterval);
+        window.studyRoomTimeInterval = null;
     }
+
+    if (window.currentStudyTimeSeconds !== undefined) {
+        try { updateStudyTime(window.currentStudyTimeSeconds); } catch (e) {}
+    }
+
+    const alert = document.getElementById('studyRoomAlert');
+    const overlay = document.getElementById('alertOverlay');
+    if (alert) alert.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+
     showNotification('You have been automatically removed from the study room.', 'error');
+
     setTimeout(() => {
+        sessionStorage.removeItem('currentRoom');
         window.location.href = 'study-room.html';
     }, 2000);
 }
+window.kickFromStudyRoom = kickFromStudyRoom;
 
 // Settings
 function saveProfile() {
@@ -1360,4 +1449,373 @@ function logout() {
         window.location.href = 'index.html';
     }
 }
+
+/* Utilities: parse and format duration strings used in UI */
+
+// Parse strings like "1h 50m 02s", "128h 20m", "30m 10s", "29s" into seconds
+function parseDurationToSeconds(str) {
+    if (!str || typeof str !== 'string') return 0;
+    const hrs = (str.match(/(\d+)\s*h/) || [0,0])[1] || 0;
+    const mins = (str.match(/(\d+)\s*m/) || [0,0])[1] || 0;
+    const secs = (str.match(/(\d+)\s*s/) || [0,0])[1] || 0;
+    return Number(hrs) * 3600 + Number(mins) * 60 + Number(secs);
+}
+
+// Format seconds to "Hh Mm" for totals (keeps minutes, drops seconds)
+function formatSecondsToHoursMinutes(totalSeconds) {
+    totalSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+}
+
+/**
+ * Add secondsToAdd to both currentUser.totalStudyTime and currentUser.thisWeekTime,
+ * persist raw seconds to localStorage and update DOM if present.
+ */
+function updateUserStudyTotals(secondsToAdd) {
+    secondsToAdd = Math.max(0, Math.floor(Number(secondsToAdd) || 0));
+    // Load persisted base values (fallback to currentUser fields)
+    const persistedTotal = parseInt(localStorage.getItem('userTotalStudySeconds') || '0', 10) || parseDurationToSeconds(currentUser.totalStudyTime);
+    const persistedWeek  = parseInt(localStorage.getItem('userThisWeekSeconds') || '0', 10) || parseDurationToSeconds(currentUser.thisWeekTime);
+
+    const newTotalSeconds = persistedTotal + secondsToAdd;
+    const newWeekSeconds  = persistedWeek + secondsToAdd;
+
+    // Persist raw seconds for future accurate arithmetic
+    localStorage.setItem('userTotalStudySeconds', String(newTotalSeconds));
+    localStorage.setItem('userThisWeekSeconds', String(newWeekSeconds));
+
+    // Update currentUser fields (display format: "Hh Mm")
+    currentUser.totalStudyTime = formatSecondsToHoursMinutes(newTotalSeconds);
+    currentUser.thisWeekTime = formatSecondsToHoursMinutes(newWeekSeconds);
+
+    // Update any open UI (home.html ids)
+    const totalEl = document.getElementById('totalStudyTime');
+    if (totalEl) totalEl.textContent = currentUser.totalStudyTime;
+    const weekEl = document.getElementById('thisWeekTime');
+    if (weekEl) weekEl.textContent = currentUser.thisWeekTime;
+}
+
+// If there are persisted values already, initialize currentUser fields on load
+(function initPersistedTotals() {
+    const savedTotal = parseInt(localStorage.getItem('userTotalStudySeconds') || '', 10);
+    const savedWeek = parseInt(localStorage.getItem('userThisWeekSeconds') || '', 10);
+    if (!Number.isNaN(savedTotal)) {
+        currentUser.totalStudyTime = formatSecondsToHoursMinutes(savedTotal);
+    }
+    if (!Number.isNaN(savedWeek)) {
+        currentUser.thisWeekTime = formatSecondsToHoursMinutes(savedWeek);
+    }
+})();
+
+/* Restore original Leave behavior for the Leave button (now accumulates study time) */
+function leaveStudyRoom() {
+    if (!confirm('Are you sure you want to leave this study room?')) return;
+
+    // Calculate seconds to add: prefer live value if available
+    const secondsToAdd = Math.max(0, Math.floor(Number(window.currentStudyTimeSeconds || 0)));
+
+    // Update user totals before leaving
+    try {
+        updateUserStudyTotals(secondsToAdd);
+        // Also add to mission progress
+        if (typeof updateMissionProgress === 'function') {
+            updateMissionProgress(secondsToAdd);
+        }
+    } catch (e) {
+        console.error('Failed to update study totals on leave:', e);
+    }
+
+    // Clear the per-second study time interval
+    if (window.studyRoomTimeInterval) {
+        clearInterval(window.studyRoomTimeInterval);
+        window.studyRoomTimeInterval = null;
+    }
+
+    // Clear any running alert/countdown timers to avoid stray timers after leaving
+    if (typeof __sr_alertTimer !== 'undefined' && __sr_alertTimer) {
+        clearTimeout(__sr_alertTimer);
+        __sr_alertTimer = null;
+    }
+    if (typeof __sr_countdownInterval !== 'undefined' && __sr_countdownInterval) {
+        clearInterval(__sr_countdownInterval);
+        __sr_countdownInterval = null;
+    }
+
+    // Remove current room from session and navigate back to room list
+    sessionStorage.removeItem('currentRoom');
+    window.location.href = 'study-room.html';
+}
+window.leaveStudyRoom = leaveStudyRoom;
+
+// -------------------- Missions: definitions, persistence, UI --------------------
+// Mission templates (edit targets/points anytime)
+const DAILY_MISSIONS_TEMPLATE = [
+    {
+        id: 'daily_enter_room_60m',
+        title: 'Enter study room & study each 60 mins',
+        targetSeconds: 60 * 60, // 3600s
+        points: 15
+    },
+    {
+        id: 'daily_stay_15m_with_friends',
+        title: 'Join study room with friends & stay 15 mins',
+        targetSeconds: 15 * 60, // 900s
+        points: 20
+    },
+    {
+        id: 'daily_login',
+        title: 'Login daily',
+        targetSeconds: 0,
+        points: 10
+    }
+];
+
+const WEEKLY_MISSIONS_TEMPLATE = [
+    {
+        id: 'weekly_top100',
+        title: 'Enter the first 100 ranking on weekly global leaderboard',
+        targetSeconds: 0,
+        points: 100
+    },
+    {
+        id: 'weekly_top3_friends',
+        title: 'Enter the first 3 ranking on weekly friend leaderboard',
+        targetSeconds: 0,
+        points: 75
+    },
+    {
+        id: 'weekly_upload_resources',
+        title: 'Upload at least 3 useful study resources',
+        targetSeconds: 0,
+        points: 60
+    },
+    {
+        id: 'weekly_7h_goal',
+        title: 'Achieve total study time for seven hours in a week',
+        targetSeconds: 7 * 3600, // 25200s
+        points: 50
+    }
+];
+
+function loadMissions(type) {
+    const key = type === 'daily' ? 'dailyMissionsState' : 'weeklyMissionsState';
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw);
+    const template = type === 'daily' ? DAILY_MISSIONS_TEMPLATE : WEEKLY_MISSIONS_TEMPLATE;
+    const initial = template.map(m => ({
+        id: m.id,
+        title: mtitle,
+        targetSeconds: m.targetSeconds || 0,
+        points: m.points || 0,
+        progressSeconds: 0,
+               claimed: false
+    }));
+    localStorage.setItem(key, JSON.stringify(initial));
+    return initial;
+}
+
+function saveMissions(type, data) {
+    const key = type === 'daily' ? 'dailyMissionsState' : 'weeklyMissionsState';
+    localStorage.setItem(key, JSON.stringify(data));
+}
+
+window.getDailyMissions = () => loadMissions('daily');
+window.getWeeklyMissions = () => loadMissions('weekly');
+
+/**
+ * Add study seconds to mission progress (called on leaving room).
+ * secondsToAdd: integer seconds to add.
+ */
+function updateMissionProgress(secondsToAdd) {
+    secondsToAdd = Math.max(0, Math.floor(Number(secondsToAdd) || 0));
+
+    // DAILY
+    const daily = loadMissions('daily');
+    let changed = false;
+    daily.forEach(m => {
+        if (m.targetSeconds > 0) {
+            m.progressSeconds = Math.min(m.targetSeconds, (m.progressSeconds || 0) + secondsToAdd);
+            if (m.progressSeconds > (m.targetSeconds || 0)) m.progressSeconds = m.targetSeconds;
+            changed = true;
+        }
+    });
+    if (changed) saveMissions('daily', daily);
+
+    // WEEKLY
+    const weekly = loadMissions('weekly');
+    changed = false;
+    weekly.forEach(m => {
+        if (m.targetSeconds > 0) {
+            m.progressSeconds = Math.min(m.targetSeconds, (m.progressSeconds || 0) + secondsToAdd);
+            if (m.progressSeconds > (m.targetSeconds || 0)) m.progressSeconds = m.targetSeconds;
+            changed = true;
+        }
+    });
+    if (changed) saveMissions('weekly', weekly);
+
+    // Re-render UI if present
+    try { renderMissionsUI(); } catch (e) {}
+}
+window.updateMissionProgress = updateMissionProgress;
+
+/**
+ * Claim mission by id and type ('daily'|'weekly').
+ */
+function claimMission(type, missionId) {
+    const list = loadMissions(type);
+    const m = list.find(x => x.id === missionId);
+    if (!m) return;
+    const alreadyClaimed = m.claimed;
+    const achieved = (m.targetSeconds === 0) ? true : (m.progressSeconds >= m.targetSeconds);
+    if (!achieved || alreadyClaimed) return;
+    m.claimed = true;
+    saveMissions(type, list);
+
+    // Reward points
+    currentUser.studyPoints = (currentUser.studyPoints || 0) + (m.points || 0);
+    localStorage.setItem('userStudyPoints', String(currentUser.studyPoints));
+    try { updateUserInfo(); } catch (e) {} // update UI if function exists
+
+    // update home UI
+    try { renderMissionsUI(); } catch (e) {}
+}
+window.claimMission = claimMission;
+
+/**
+ * Render mission panels in home.html. Expects specific containers to exist:
+ * - #dailyMissionsContainer
+ * - #weeklyMissionsContainer
+ */
+function renderMissionsUI() {
+    const dailyList = loadMissions('daily');
+    const weeklyList = loadMissions('weekly');
+
+    const dailyContainer = document.getElementById('dailyMissionsContainer');
+    const weeklyContainer = document.getElementById('weeklyMissionsContainer');
+
+    if (dailyContainer) {
+        dailyContainer.innerHTML = dailyList.map(m => {
+            const percent = m.targetSeconds > 0 ? Math.round((m.progressSeconds||0) / m.targetSeconds * 100) : (m.claimed ? 100 : 0);
+            const progressText = m.targetSeconds > 0
+                ? `${formatStudyDurationHMS(m.progressSeconds || 0)} / ${formatStudyDurationHMS(m.targetSeconds)} (${percent}%)`
+                : (m.claimed ? 'Completed' : 'Not started');
+            const btnDisabled = (!m.targetSeconds && !m.claimed) ? false : !( (m.targetSeconds === 0) || ((m.progressSeconds||0) >= m.targetSeconds) ) ;
+            const btnClass = m.claimed ? 'get-btn claimed' : 'get-btn';
+            const btnDisabledAttr = m.claimed ? 'disabled' : (btnDisabled ? 'disabled' : '');
+            return `
+<div class="mission-item ${m.claimed ? 'completed' : ''}">
+  <div class="mission-content">
+    <div class="mission-text-row">
+      <span class="mission-text">${m.title}</span>
+      <span class="mission-points">+${m.points} pts</span>
+    </div>
+    ${m.targetSeconds > 0 ? `
+    <div class="progress-bar-container">
+      <div class="progress-bar-wrapper">
+        <div class="progress-bar-completed" style="width:${percent}%"></div>
+        <div class="progress-bar-remaining" style="width:${100-percent}%"></div>
+      </div>
+      <span class="progress-text">${progressText}</span>
+    </div>` : `<div class="progress-text">${progressText}</div>`}
+    <div class="mission-actions">
+      <button class="${btnClass}" onclick="claimMission('daily','${m.id}')" ${btnDisabledAttr}>${m.claimed ? 'Got' : 'Get'}</button>
+    </div>
+  </div>
+</div>`;
+        }).join('');
+    }
+
+    if (weeklyContainer) {
+        weeklyContainer.innerHTML = weeklyList.map(m => {
+            const percent = m.targetSeconds > 0 ? Math.round((m.progressSeconds||0) / m.targetSeconds * 100) : (m.claimed ? 100 : 0);
+            const progressText = m.targetSeconds > 0
+                ? `${formatStudyDurationHMS(m.progressSeconds || 0)} / ${formatStudyDurationHMS(m.targetSeconds)} (${percent}%)`
+                : (m.claimed ? 'Completed' : 'Not started');
+            const btnDisabled = (!m.targetSeconds && !m.claimed) ? false : !( (m.targetSeconds === 0) || ((m.progressSeconds||0) >= m.targetSeconds) ) ;
+            const btnClass = m.claimed ? 'get-btn claimed' : 'get-btn';
+            const btnDisabledAttr = m.claimed ? 'disabled' : (btnDisabled ? 'disabled' : '');
+            return `
+<div class="mission-item ${m.claimed ? 'completed' : ''}">
+  <div class="mission-content">
+    <div class="mission-text-row">
+      <span class="mission-text">${m.title}</span>
+      <span class="mission-points">+${m.points} pts</span>
+    </div>
+    ${m.targetSeconds > 0 ? `
+    <div class="progress-bar-container">
+      <div class="progress-bar-wrapper">
+        <div class="progress-bar-completed" style="width:${percent}%"></div>
+        <div class="progress-bar-remaining" style="width:${100-percent}%"></div>
+      </div>
+      <span class="progress-text">${progressText}</span>
+    </div>` : `<div class="progress-text">${progressText}</div>`}
+    <div class="mission-actions">
+      <button class="${btnClass}" onclick="claimMission('weekly','${m.id}')" ${btnDisabledAttr}>${m.claimed ? 'Got' : 'Get'}</button>
+    </div>
+  </div>
+</div>`;
+        }).join('');
+    }
+
+    // Update study points display if present
+    const ptsEl = document.getElementById('studyPoints');
+    if (ptsEl) ptsEl.textContent = (currentUser.studyPoints || 0).toLocaleString();
+}
+window.renderMissionsUI = renderMissionsUI;
+
+/** Reset helpers using HK timezone (UTC+8) */
+function getHKNow() {
+    const now = new Date();
+    const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+    return new Date(utcMs + (8 * 3600000));
+}
+function scheduleNextDailyReset() {
+    const hkNow = getHKNow();
+    const nextMidnightHK = new Date(hkNow.getFullYear(), hkNow.getMonth(), hkNow.getDate() + 1, 0, 0, 0);
+    const nextUtcMs = nextMidnightHK.getTime() - (8 * 3600000);
+    const delay = Math.max(0, nextUtcMs - Date.now());
+    setTimeout(() => { resetDailyMissions(); scheduleNextDailyReset(); }, delay);
+}
+function scheduleNextWeeklyReset() {
+    const hkNow = getHKNow();
+    const day = hkNow.getDay(); // 0 Sun ... 1 Mon
+    const daysToAdd = (8 - day) % 7 || 7; // next Monday
+    const nextMondayHK = new Date(hkNow.getFullYear(), hkNow.getMonth(), hkNow.getDate() + daysToAdd, 0, 0, 0);
+    const nextUtcMs = nextMondayHK.getTime() - (8 * 3600000);
+    const delay = Math.max(0, nextUtcMs - Date.now());
+    setTimeout(() => { resetWeeklyMissions(); scheduleNextWeeklyReset(); }, delay);
+}
+
+function resetDailyMissions() {
+    const daily = loadMissions('daily');
+    daily.forEach(m => {
+        m.progressSeconds = 0;
+        m.claimed = false;
+    });
+    saveMissions('daily', daily);
+    try { renderMissionsUI(); } catch (e) {}
+}
+function resetWeeklyMissions() {
+    const weekly = loadMissions('weekly');
+    weekly.forEach(m => {
+        m.progressSeconds = 0;
+        m.claimed = false;
+    });
+    saveMissions('weekly', weekly);
+    try { renderMissionsUI(); } catch (e) {}
+}
+
+function initMissionsAndSchedules() {
+    loadMissions('daily');
+    loadMissions('weekly');
+    try { renderMissionsUI(); } catch (e) {}
+    scheduleNextDailyReset();
+    scheduleNextWeeklyReset();
+}
+window.initMissionsAndSchedules = initMissionsAndSchedules;
+
+// Initialize on load
+try { initMissionsAndSchedules(); } catch (e) {}
 

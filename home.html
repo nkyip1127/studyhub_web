@@ -83,87 +83,20 @@
             <div class="mission-panel">
                 <div class="mission-header">
                     <h3>Daily Mission</h3>
-                    <span class="mission-progress" id="dailyProgress">1 of 3 missions completed</span>
+                    <span class="mission-progress" id="dailyProgress">0 of 3 missions completed</span>
                 </div>
-                <div class="mission-list">
-                    <div class="mission-item completed">
-                        <div class="mission-text-row">
-                            <span class="mission-text">Login daily</span>
-                            <span class="mission-points">+10 pts</span>
-                        </div>
-                    </div>
-                    <div class="mission-item">
-                        <div class="mission-content">
-                            <div class="mission-text-row">
-                                <span class="mission-text">Enter study room & study each 60 mins</span>
-                                <span class="mission-points">+15 pts</span>
-                            </div>
-                            <div class="progress-bar-container">
-                                <div class="progress-bar-wrapper">
-                                    <div class="progress-bar-completed" style="width: 40%"></div>
-                                    <div class="progress-bar-remaining" style="width: 60%"></div>
-                                </div>
-                                <span class="progress-text">24m / 60m (40%)</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mission-item">
-                        <div class="mission-content">
-                            <div class="mission-text-row">
-                                <span class="mission-text">Join study room with friends & stay 15 mins</span>
-                                <span class="mission-points">+20 pts</span>
-                            </div>
-                            <div class="progress-bar-container">
-                                <div class="progress-bar-wrapper">
-                                    <div class="progress-bar-completed" style="width: 60%"></div>
-                                    <div class="progress-bar-remaining" style="width: 40%"></div>
-                                </div>
-                                <span class="progress-text">9m / 15m (60%)</span>
-                            </div>
-                        </div>
-                    </div>
+                <div id="dailyMissionsContainer" class="mission-list">
+                    <!-- Daily missions rendered here by renderMissionsUI() -->
                 </div>
             </div>
 
             <div class="mission-panel">
                 <div class="mission-header">
                     <h3>Weekly Mission</h3>
-                    <span class="mission-progress" id="weeklyProgress">2 of 4 missions completed</span>
+                    <span class="mission-progress" id="weeklyProgress">0 of 4 missions completed</span>
                 </div>
-                <div class="mission-list">
-                    <div class="mission-item">
-                        <div class="mission-text-row">
-                            <span class="mission-text">Enter the first 100 ranking on weekly global leaderboard</span>
-                            <span class="mission-points">+100 pts</span>
-                        </div>
-                    </div>
-                    <div class="mission-item completed">
-                        <div class="mission-text-row">
-                            <span class="mission-text">Enter the first 3 ranking on weekly friend leaderboard</span>
-                            <span class="mission-points">+75 pts</span>
-                        </div>
-                    </div>
-                    <div class="mission-item completed">
-                        <div class="mission-text-row">
-                            <span class="mission-text">Upload at least 3 useful study resources</span>
-                            <span class="mission-points">+60 pts</span>
-                        </div>
-                    </div>
-                    <div class="mission-item completed">
-                        <div class="mission-content">
-                            <div class="mission-text-row">
-                                <span class="mission-text">Achieve total study time for seven hours in a week</span>
-                                <span class="mission-points">+50 pts</span>
-                            </div>
-                            <div class="progress-bar-container">
-                                <div class="progress-bar-wrapper">
-                                    <div class="progress-bar-completed" style="width: 100%"></div>
-                                    <!-- <div class="progress-bar-remaining" style="width: 25%"></div> -->
-                                </div>
-                                <span class="progress-text">7h / 7h (100%)</span>
-                            </div>
-                        </div>
-                    </div>
+                <div id="weeklyMissionsContainer" class="mission-list">
+                    <!-- Weekly missions rendered here by renderMissionsUI() -->
                 </div>
             </div>
         </div>
@@ -183,6 +116,11 @@
             // Initialize lucide icons
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
+            }
+
+            // Initialize missions UI and schedules
+            if (typeof initMissionsAndSchedules === 'function') {
+                initMissionsAndSchedules();
             }
         };
     </script>
